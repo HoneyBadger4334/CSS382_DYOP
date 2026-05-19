@@ -11,6 +11,7 @@ Built with Next.js, FastAPI, OpenStreetMap (Leaflet), and GPT-4o-mini.
 | Map | OpenStreetMap via Leaflet |
 | Backend | FastAPI + Python 3.11 |
 | AI | GPT-4o-mini (NLP alert summarizer) |
+| Recommender | Personalized event feed with major seeding, interaction logging, and collaborative ranking |
 | Database | PostgreSQL / Supabase *(Week 9)* |
 | Deployment | Vercel (frontend) + Render or Railway (backend) |
 
@@ -29,7 +30,8 @@ Built with Next.js, FastAPI, OpenStreetMap (Leaflet), and GPT-4o-mini.
 
 ```bash
 cd backend
-python3 -m venv venv && source venv/bin/activate
+python3.12 -m venv ../.venv312
+source ../.venv312/bin/activate
 pip install -r requirements.txt
 
 cp ../.env.example .env
@@ -55,15 +57,32 @@ python test_nlp_summarizer.py
 # Must show ≥90% (18/20) valid JSON responses
 ```
 
+### Recommender Smoke Test
+
+```bash
+cd backend
+source venv/bin/activate
+python test_recommender.py
+```
+
+### Recommender API
+
+```bash
+GET /api/recommendations?user_token=demo-student-1&major=Computer%20Science
+POST /api/recommendations/interactions
+```
+
 ## Architecture
 
 ```
 Browser
   └─► Next.js (port 3000)
         ├─ CampusMap (react-leaflet / OpenStreetMap)
+        ├─ Personalized recommendations panel
         └─► FastAPI (port 8000)
               ├─ RSS poller → UW Alerts RSS feed (5 min interval)
               ├─ NLP summarizer → GPT-4o-mini → {building, type, severity, action}
+              ├─ Recommendation engine → major-seeded cold start → collaborative mode
               └─ Building coords lookup → pin placement on map
 ```
 

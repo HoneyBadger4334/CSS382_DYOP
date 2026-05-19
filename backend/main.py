@@ -4,11 +4,17 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from building_coords import resolve_coordinates, CAMPUS_CENTER
+from recommender import (
+    InteractionRequest,
+    InteractionResponse,
+    RecommendationResponse,
+    store as recommendation_store,
+)
 from rss_fetcher import fetch_alerts
 from nlp_summarizer import summarize
 
@@ -18,8 +24,9 @@ app = FastAPI(title="Campus Pulse API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://*.vercel.app"],
-    allow_methods=["GET"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -137,6 +144,28 @@ async def startup_event() -> None:
 @app.get("/api/alerts", response_model=AlertsResponse)
 async def get_alerts() -> AlertsResponse:
     return _cache
+
+
+@app.get("/api/recommendations", response_model=RecommendationResponse)
+async def get_recommendations(
+    user_token: str = "demo-student-1",
+    major: Optional[str] = None,
+    limit: int = 6,
+) -> RecommendationResponse:
+    return recommendation_store.get_recommendations(user_token=user_token, major=major, limit=limit)
+
+
+@app.post("/api/recommendations/interactions", response_model=InteractionResponse)
+async def log_recommendation_interaction(payload: InteractionRequest) -> InteractionResponse:
+    try:
+        return recommendation_store.record_interaction(
+            user_token=payload.user_token,
+            event_id=payload.event_id,
+            interaction_type=payload.interaction_type,
+            major=payload.major,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/api/health")

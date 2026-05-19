@@ -23,6 +23,9 @@ BUILDING_COORDS: dict[str, tuple[float, float]] = {
     "CC": (47.75940, -122.19030),
     "CAMPUS CENTER": (47.75940, -122.19030),
     "CAMPUS": (47.75940, -122.19030),
+    "SUMMIT HALL": (47.76221, -122.19447),
+    "NORTH CREEK EVENTS CENTER": (47.76015, -122.19122),
+    "NCEC": (47.76015, -122.19122),
 }
 
 

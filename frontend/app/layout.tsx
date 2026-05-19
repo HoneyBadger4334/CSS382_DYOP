@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "UW Bothell Campus Pulse",
-  description: "Real-time campus events and emergency alerts for UW Bothell",
+  description: "Real-time campus alerts and personalized event recommendations for UW Bothell",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

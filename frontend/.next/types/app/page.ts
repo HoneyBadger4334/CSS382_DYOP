@@ -1,4 +1,4 @@
-// File: /Users/kyleh/Documents/Spring2026/382/CSS382_DYOP/frontend/app/page.tsx
+// File: /Users/andyvu/CSS382_DYOP/frontend/app/page.tsx
 import * as entry from '../../../app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

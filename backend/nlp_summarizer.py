@@ -1,5 +1,7 @@
 import json
 import os
+from typing import Optional
+
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -20,7 +22,7 @@ Rules:
 - severity=low: all-clear, informational, minor disruption
 - If no specific building is mentioned, use CAMPUS."""
 
-_client: OpenAI | None = None
+_client: Optional[OpenAI] = None
 
 
 def _get_client() -> OpenAI:
@@ -37,7 +39,7 @@ class AlertSummary(BaseModel):
     recommended_action: str
 
 
-def summarize(raw_text: str) -> tuple[AlertSummary | None, bool]:
+def summarize(raw_text: str) -> tuple[Optional[AlertSummary], bool]:
     """
     Returns (summary, ai_available).
     summary is None only on hard parse failure; ai_available=False on API error.

@@ -8,6 +8,7 @@ Requires OPENAI_API_KEY in environment or .env file.
 
 import json
 import os
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,7 +42,7 @@ VALID_SEVERITIES = {"low", "medium", "high"}
 VALID_BUILDINGS = {"UW1", "UW2", "DISC", "STEM", "LIB", "CAB", "HH", "NCH", "CAMPUS"}
 
 
-def validate(summary: AlertSummary | None) -> bool:
+def validate(summary: Optional[AlertSummary]) -> bool:
     if summary is None:
         return False
     if not summary.building_name or not summary.incident_type:
