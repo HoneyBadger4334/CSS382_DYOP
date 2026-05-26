@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import AlertBanner from "@/components/AlertBanner";
+import LoginPanel from "@/components/LoginPanel";
+import RecommendationsPanel from "@/components/RecommendationsPanel";
 import type { AlertPin } from "@/components/CampusMap";
 
 // Leaflet uses browser APIs — must be loaded client-side only.
@@ -21,6 +23,44 @@ interface AlertsResponse {
 export default function HomePage() {
   const [data, setData] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [netid, setNetid] = useState<string | null>(null);
+  const [hashedNetid, setHashedNetid] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [major, setMajor] = useState<string | null>(null);
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const storedNetid = localStorage.getItem("netid_display");
+    const storedHash = localStorage.getItem("hashed_netid");
+    const storedMajor = localStorage.getItem("major");
+    if (storedNetid && storedHash) {
+      setNetid(storedNetid);
+      setHashedNetid(storedHash);
+    }
+    if (storedMajor) setMajor(storedMajor);
+  }, []);
+
+  function handleMajorChange(m: string) {
+    localStorage.setItem("major", m);
+    setMajor(m);
+  }
+
+  function handleLogin(rawNetid: string, hashed: string) {
+    localStorage.setItem("netid_display", rawNetid);
+    localStorage.setItem("hashed_netid", hashed);
+    setNetid(rawNetid);
+    setHashedNetid(hashed);
+    setShowLogin(false);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("netid_display");
+    localStorage.removeItem("hashed_netid");
+    localStorage.removeItem("major");
+    setNetid(null);
+    setHashedNetid(null);
+    setMajor(null);
+  }
 
   async function fetchAlerts() {
     try {
@@ -69,22 +109,82 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Alert count badge */}
-        <div
-          style={{
-            background: alerts.length > 0 ? "#7f1d1d" : "#1e3a5f",
-            color: alerts.length > 0 ? "#fca5a5" : "#7dd3fc",
-            borderRadius: 20,
-            padding: "4px 12px",
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          {loading
-            ? "Loading…"
-            : `${alerts.length} alert${alerts.length !== 1 ? "s" : ""}`}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Website link */}
+          <a
+            href="/home"
+            style={{
+              fontSize: 11,
+              color: "#475569",
+              textDecoration: "none",
+              padding: "4px 8px",
+              border: "1px solid #1e293b",
+              borderRadius: 4,
+            }}
+          >
+            Project Site
+          </a>
+
+          {/* Alert count badge */}
+          <div
+            style={{
+              background: alerts.length > 0 ? "#7f1d1d" : "#1e3a5f",
+              color: alerts.length > 0 ? "#fca5a5" : "#7dd3fc",
+              borderRadius: 20,
+              padding: "4px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            {loading
+              ? "Loading…"
+              : `${alerts.length} alert${alerts.length !== 1 ? "s" : ""}`}
+          </div>
+
+          {/* Auth controls */}
+          {netid ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                Signed in as <strong style={{ color: "#f1f5f9" }}>{netid}</strong>
+              </span>
+              <button
+                onClick={handleLogout}
+                style={{
+                  fontSize: 11,
+                  color: "#94a3b8",
+                  background: "transparent",
+                  border: "1px solid #334155",
+                  borderRadius: 4,
+                  padding: "3px 8px",
+                  cursor: "pointer",
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowLogin(true)}
+              style={{
+                fontSize: 12,
+                color: "#7dd3fc",
+                background: "transparent",
+                border: "1px solid #1e3a5f",
+                borderRadius: 6,
+                padding: "5px 12px",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Sign in with NetID
+            </button>
+          )}
         </div>
       </header>
+
+      {showLogin && (
+        <LoginPanel onLogin={handleLogin} onClose={() => setShowLogin(false)} />
+      )}
 
       {/* Status banners */}
       {data && (
@@ -95,26 +195,36 @@ export default function HomePage() {
         />
       )}
 
-      {/* Map */}
-      <main style={{ flex: 1, position: "relative" }}>
-        {loading && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "rgba(15,23,42,0.7)",
-              zIndex: 1000,
-              fontSize: 14,
-              color: "#94a3b8",
-            }}
-          >
-            Loading campus map…
-          </div>
+      {/* Map + optional recommendations panel */}
+      <main style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <div style={{ flex: 1, position: "relative" }}>
+          {loading && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(15,23,42,0.7)",
+                zIndex: 1000,
+                fontSize: 14,
+                color: "#94a3b8",
+              }}
+            >
+              Loading campus map…
+            </div>
+          )}
+          <CampusMap alerts={alerts} />
+        </div>
+
+        {hashedNetid && (
+          <RecommendationsPanel
+            hashedNetid={hashedNetid}
+            major={major}
+            onMajorChange={handleMajorChange}
+          />
         )}
-        <CampusMap alerts={alerts} />
       </main>
 
       {/* Legend */}

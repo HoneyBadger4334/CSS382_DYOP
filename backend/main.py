@@ -11,6 +11,8 @@ from pydantic import BaseModel
 from building_coords import resolve_coordinates, CAMPUS_CENTER
 from rss_fetcher import fetch_alerts
 from nlp_summarizer import summarize
+from database import log_interaction, hash_netid
+from recommender import get_recommendations
 
 load_dotenv()
 
@@ -19,7 +21,7 @@ app = FastAPI(title="Campus Pulse API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "https://*.vercel.app"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -142,3 +144,36 @@ async def get_alerts() -> AlertsResponse:
 @app.get("/api/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+class LoginRequest(BaseModel):
+    netid: str
+
+
+@app.post("/api/login")
+async def login(body: LoginRequest) -> dict:
+    if not body.netid or not body.netid.strip():
+        return {"error": "NetID required"}
+    hashed = hash_netid(body.netid)
+    return {"hashed_netid": hashed}
+
+
+@app.get("/api/recommendations")
+async def recommendations(
+    hashed_netid: str,
+    major: Optional[str] = None,
+    limit: int = 10,
+) -> dict:
+    events, mode = get_recommendations(hashed_netid, major=major, limit=limit)
+    return {"events": events, "mode": mode}
+
+
+class InteractionRequest(BaseModel):
+    hashed_netid: str
+    event_id: str
+
+
+@app.post("/api/interactions")
+async def record_interaction(body: InteractionRequest) -> dict:
+    ok = log_interaction(body.hashed_netid, body.event_id)
+    return {"recorded": ok}
