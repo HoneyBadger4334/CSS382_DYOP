@@ -1,21 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-const MAJOR_OPTIONS = [
-  "Computer Science",
-  "Informatics",
-  "Biology",
-  "Business",
-  "Nursing",
-  "Education",
-  "Undeclared",
-];
-
-const DEFAULT_TOKEN = "demo-student-1";
-const DEFAULT_MAJOR = "Computer Science";
+const DEFAULT_TOKEN = "student-1";
 
 interface RecommendationCard {
   id: string;
@@ -31,6 +19,8 @@ interface RecommendationCard {
   rank: number;
   score: number;
   why: string;
+  ai_score: number;
+  matched_keywords: string[];
 }
 
 interface RecommendationResponse {
@@ -42,6 +32,8 @@ interface RecommendationResponse {
   grace_period_active: boolean;
   global_interaction_count: number;
   user_interaction_count: number;
+  ai_available: boolean;
+  ai_target_major: string;
   fallback_reason: string | null;
   generated_at: string;
   recommendations: RecommendationCard[];
@@ -73,29 +65,71 @@ function formatTime(iso: string): string {
 }
 
 function formatMode(mode: string): string {
+  if (mode === "ai-match") return "AI matching";
+  if (mode === "keyword-fallback") return "Keyword fallback";
   if (mode === "collaborative") return "Collaborative filtering";
   if (mode === "major-seeded") return "Major-seeded cold start";
-  return "Popularity fallback";
+  return "Live calendar feed";
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightDescription(text: string, keywords: string[]): ReactNode {
+  const normalizedKeywords = Array.from(
+    new Set(
+      keywords
+        .map((keyword) => keyword.trim())
+        .filter(Boolean)
+        .sort((left, right) => right.length - left.length),
+    ),
+  );
+
+  if (normalizedKeywords.length === 0) {
+    return text;
+  }
+
+  const pattern = new RegExp(`(${normalizedKeywords.map(escapeRegExp).join("|")})`, "gi");
+  const segments = text.split(pattern);
+
+  return segments.map((segment, index) => {
+    const match = normalizedKeywords.find((keyword) => keyword.toLowerCase() === segment.toLowerCase());
+    if (match) {
+      return (
+        <mark
+          key={`${segment}-${index}`}
+          style={{
+            background: "rgba(94, 234, 212, 0.22)",
+            color: "#ecfeff",
+            padding: "0 3px",
+            borderRadius: 4,
+          }}
+        >
+          {segment}
+        </mark>
+      );
+    }
+
+    return <span key={`${segment}-${index}`}>{segment}</span>;
+  });
 }
 
 export default function RecommendationsPanel() {
   const [draftToken, setDraftToken] = useState(DEFAULT_TOKEN);
-  const [draftMajor, setDraftMajor] = useState(DEFAULT_MAJOR);
   const [activeToken, setActiveToken] = useState(DEFAULT_TOKEN);
-  const [activeMajor, setActiveMajor] = useState(DEFAULT_MAJOR);
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadRecommendations(nextToken = activeToken, nextMajor = activeMajor) {
+  async function loadRecommendations(nextToken = activeToken) {
     setLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams({
         user_token: nextToken,
-        major: nextMajor,
         limit: "6",
       });
 
@@ -110,9 +144,7 @@ export default function RecommendationsPanel() {
       const json: RecommendationResponse = await response.json();
       setData(json);
       setActiveToken(nextToken);
-      setActiveMajor(nextMajor);
       setDraftToken(nextToken);
-      setDraftMajor(nextMajor);
     } catch {
       setError("Recommendation feed is temporarily unavailable.");
     } finally {
@@ -121,14 +153,13 @@ export default function RecommendationsPanel() {
   }
 
   useEffect(() => {
-    void loadRecommendations(DEFAULT_TOKEN, DEFAULT_MAJOR);
+    void loadRecommendations(DEFAULT_TOKEN);
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextToken = draftToken.trim() || DEFAULT_TOKEN;
-    const nextMajor = draftMajor;
-    await loadRecommendations(nextToken, nextMajor);
+    await loadRecommendations(nextToken);
   }
 
   async function handleInteraction(eventId: string, interactionType: InteractionResponse["interaction_type"]) {
@@ -141,7 +172,6 @@ export default function RecommendationsPanel() {
           user_token: activeToken,
           event_id: eventId,
           interaction_type: interactionType,
-          major: activeMajor,
         }),
       });
 
@@ -151,7 +181,7 @@ export default function RecommendationsPanel() {
 
       const json: InteractionResponse = await response.json();
       if (json.accepted) {
-        await loadRecommendations(activeToken, activeMajor);
+        await loadRecommendations(activeToken);
       }
     } catch {
       setError("Could not save your interaction right now.");
@@ -168,11 +198,11 @@ export default function RecommendationsPanel() {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
           <div>
             <p style={{ color: "#5eead4", fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-              Personalized feed
+              AI-ranked events
             </p>
             <h2 style={{ fontSize: 22, marginTop: 6, letterSpacing: "-0.02em" }}>For You</h2>
             <p style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.5, marginTop: 8 }}>
-              Demo profile + interaction history drive the ranking. Save an event to refine the feed.
+              AI extracts matching keywords from live UW Bothell event descriptions and ranks them for computer science students.
             </p>
           </div>
 
@@ -190,9 +220,15 @@ export default function RecommendationsPanel() {
               <div className="metric-value">{data.user_interaction_count}</div>
             </div>
             <div className="metric-card">
-              <div className="metric-label">Major source</div>
+              <div className="metric-label">AI target</div>
               <div className="metric-value" style={{ fontSize: 14 }}>
-                {data.major_source}
+                {data.ai_target_major}
+              </div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">Feed source</div>
+              <div className="metric-value" style={{ fontSize: 14 }}>
+                UW Bothell calendar
               </div>
             </div>
             <div className="metric-card">
@@ -206,23 +242,12 @@ export default function RecommendationsPanel() {
 
         <form className="reco-form" onSubmit={handleSubmit}>
           <label className="reco-field">
-            <span>Demo token or hashed NetID</span>
+            <span>Student token or hashed NetID</span>
             <input
               value={draftToken}
               onChange={(event) => setDraftToken(event.target.value)}
-              placeholder="demo-student-1"
+              placeholder="student-1"
             />
-          </label>
-
-          <label className="reco-field">
-            <span>Declared major</span>
-            <select value={draftMajor} onChange={(event) => setDraftMajor(event.target.value)}>
-              {MAJOR_OPTIONS.map((major) => (
-                <option key={major} value={major}>
-                  {major}
-                </option>
-              ))}
-            </select>
           </label>
 
           <div className="reco-actions">
@@ -232,9 +257,9 @@ export default function RecommendationsPanel() {
             <button
               className="button-secondary"
               type="button"
-              onClick={() => void loadRecommendations(DEFAULT_TOKEN, DEFAULT_MAJOR)}
+              onClick={() => void loadRecommendations(DEFAULT_TOKEN)}
             >
-              Reset demo profile
+              Reset token
             </button>
           </div>
         </form>
@@ -268,16 +293,25 @@ export default function RecommendationsPanel() {
                     {card.building_name} · {formatTime(card.start_time)}
                   </div>
                 </div>
-                <span className="reco-score">{card.score.toFixed(2)}</span>
+                <span className="reco-score">AI {Math.round(card.ai_score)}%</span>
               </div>
 
               <p className="reco-why">{card.why}</p>
+
+              <p className="reco-note" style={{ lineHeight: 1.6 }}>
+                {highlightDescription(card.description, card.matched_keywords)}
+              </p>
 
               <div className="reco-meta">
                 <span className="chip">{card.category}</span>
                 {card.tags.slice(0, 3).map((tag) => (
                   <span key={tag} className="chip">
                     {tag}
+                  </span>
+                ))}
+                {card.matched_keywords.slice(0, 3).map((keyword) => (
+                  <span key={keyword} className="chip" style={{ borderColor: "rgba(94, 234, 212, 0.32)" }}>
+                    {keyword}
                   </span>
                 ))}
               </div>

@@ -103,6 +103,15 @@ def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip().lower()
 
 
+def _contains_location_hint(text: str, needle: str) -> bool:
+    normalized_text = _normalize_text(text)
+    normalized_needle = _normalize_text(needle)
+    if not normalized_text or not normalized_needle:
+        return False
+    pattern = rf"\b{re.escape(normalized_needle)}\b"
+    return re.search(pattern, normalized_text) is not None
+
+
 def _split_values(value: str) -> list[str]:
     if not value:
         return []
@@ -134,6 +143,11 @@ def _extract_field_value(raw_html: str, label: str) -> str:
 def _extract_schedule_html(raw_html: str) -> str:
     match = SCHEDULE_RE.search(raw_html)
     return match.group("schedule") if match else ""
+
+
+def _extract_leading_schedule_text(raw_html: str) -> str:
+    leading_fragment = re.split(r"(?i)<br\s*/?>", raw_html, maxsplit=1)[0]
+    return _clean_html_fragment(leading_fragment)
 
 
 def _parse_date_token(token: str, fallback_year: int) -> date:
@@ -278,7 +292,7 @@ def _infer_building_name(location_text: str, location_type: str) -> str:
     )
 
     for needle, building_name in aliases:
-        if needle in combined:
+        if _contains_location_hint(combined, needle):
             return building_name
 
     return "CAMPUS"
@@ -400,6 +414,7 @@ def _build_event_dict(entry: dict) -> Optional[dict[str, object]]:
     raw_html = str(entry.get("description") or entry.get("summary") or "")
     schedule_html = _extract_schedule_html(raw_html)
     schedule_text = _clean_html_fragment(schedule_html)
+    leading_schedule_text = _extract_leading_schedule_text(raw_html)
     location_text = _extract_campus_location(raw_html)
     location_type = _extract_location_type(raw_html)
     event_types = _extract_event_types(raw_html)
@@ -409,7 +424,8 @@ def _build_event_dict(entry: dict) -> Optional[dict[str, object]]:
         return None
 
     published_value = str(entry.get("published") or "") or None
-    start_time, end_time, all_day = _parse_schedule_window(schedule_text or location_text or raw_title, published_value)
+    schedule_source = schedule_text or leading_schedule_text or location_text or raw_title
+    start_time, end_time, all_day = _parse_schedule_window(schedule_source, published_value)
 
     body_html = raw_html
     if schedule_html:
@@ -436,7 +452,7 @@ def _build_event_dict(entry: dict) -> Optional[dict[str, object]]:
         "audience": audience,
         "start_time": start_time.isoformat(),
         "end_time": end_time.isoformat(),
-        "schedule_text": schedule_text or _clean_html_fragment(location_text) or _clean_html_fragment(raw_title),
+        "schedule_text": schedule_text or leading_schedule_text or _clean_html_fragment(location_text) or _clean_html_fragment(raw_title),
         "all_day": all_day,
     }
 

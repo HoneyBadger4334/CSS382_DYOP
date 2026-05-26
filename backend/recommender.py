@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import os
+import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from itertools import combinations
 from threading import Lock
 from typing import List, Literal, Optional, Tuple
 
+from openai import OpenAI
 from pydantic import BaseModel, ConfigDict
 
-from building_coords import resolve_coordinates
+from calendar_fetcher import fetch_calendar_events
+
+AI_RECOMMENDER_MODEL = os.getenv("CAMPUS_PULSE_RECOMMENDER_MODEL", "gpt-4o-mini")
+AI_RECOMMENDER_TARGET_MAJOR = os.getenv("CAMPUS_PULSE_RECOMMENDER_MAJOR", "computer science")
+AI_RECOMMENDER_ENABLED = os.getenv("CAMPUS_PULSE_DISABLE_AI_RECOMMENDER", "0") != "1"
 
 GLOBAL_ACTIVATION_THRESHOLD = 50
 USER_ACTIVATION_THRESHOLD = 10
@@ -44,6 +51,8 @@ class RecommendationCard(EventCard):
     rank: int
     score: float
     why: str
+    ai_score: float
+    matched_keywords: List[str]
 
 
 class RecommendationResponse(BaseModel):
@@ -57,6 +66,8 @@ class RecommendationResponse(BaseModel):
     grace_period_active: bool
     global_interaction_count: int
     user_interaction_count: int
+    ai_available: bool
+    ai_target_major: str
     fallback_reason: Optional[str] = None
     generated_at: str
     recommendations: List[RecommendationCard]
@@ -88,6 +99,13 @@ class InteractionRecord(BaseModel):
     event_id: str
     interaction_type: InteractionType
     created_at: str
+
+
+class RecommendationInsight(BaseModel):
+    event_id: str
+    match_score: float
+    matched_keywords: List[str]
+    reason: str
 
 
 EVENT_DEFINITIONS = [
@@ -233,6 +251,17 @@ MAJOR_PROFILES: dict[str, dict[str, dict[str, float]]] = {
             "programming": 3,
             "hackathon": 3,
             "software": 3,
+            "cybersecurity": 3,
+            "security": 2,
+            "data": 2,
+            "cloud": 2,
+            "systems": 2,
+            "web": 2,
+            "machine learning": 3,
+            "ml": 3,
+            "tableau": 2,
+            "analytics": 2,
+            "technology": 1,
             "career": 2,
             "internship": 2,
             "resume": 1,
@@ -361,26 +390,235 @@ def _parse_timestamp(raw_value: str) -> datetime:
         return datetime.now(timezone.utc)
 
 
-def _build_event_catalog(anchor: Optional[datetime] = None) -> List[EventCard]:
-    anchor = anchor or datetime.now(timezone.utc)
-    catalog: List[EventCard] = []
-    for definition in EVENT_DEFINITIONS:
-        start_time = anchor + timedelta(days=definition["days_ahead"])
-        end_time = start_time + timedelta(minutes=definition["duration_minutes"])
-        catalog.append(
-            EventCard(
-                id=definition["id"],
-                title=definition["title"],
-                description=definition["description"],
-                building_name=definition["building_name"],
-                coordinates=list(resolve_coordinates(definition["building_name"])),
-                category=definition["category"],
-                tags=definition["tags"],
-                audience=definition["audience"],
-                start_time=start_time.isoformat(),
-                end_time=end_time.isoformat(),
+_ai_client: Optional[OpenAI] = None
+_ai_insight_cache: dict[str, dict[str, RecommendationInsight]] = {}
+_ai_insight_cache_lock = Lock()
+
+
+def _get_ai_client() -> OpenAI:
+    global _ai_client
+    if _ai_client is None:
+        _ai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    return _ai_client
+
+
+def _strip_code_fences(content: str) -> str:
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("```", 2)[1]
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+    return cleaned.strip()
+
+
+def _clean_text(value: str) -> str:
+    return " ".join(value.strip().split())
+
+
+def _event_signature(events: List[EventCard], target_major: str) -> str:
+    digest = hashlib.sha256()
+    digest.update(_normalize_text(target_major).encode("utf-8"))
+    for event in events:
+        digest.update(event.id.encode("utf-8"))
+        digest.update(event.title.encode("utf-8"))
+        digest.update(event.description.encode("utf-8"))
+        digest.update(event.category.encode("utf-8"))
+        digest.update(event.start_time.encode("utf-8"))
+        digest.update(event.end_time.encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _normalize_keywords(keywords: List[str]) -> List[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for keyword in keywords:
+        cleaned = _clean_text(str(keyword))
+        if not cleaned:
+            continue
+        lowered = cleaned.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        deduped.append(cleaned)
+    return deduped[:6]
+
+
+def _cs_keyword_profile(major: str) -> dict[str, dict[str, float]]:
+    normalized = _normalize_text(major)
+    profile = MAJOR_PROFILES.get(normalized)
+    if profile:
+        return profile
+    return MAJOR_PROFILES["computer science"]
+
+
+def _keyword_in_text(text: str, keyword: str) -> bool:
+    cleaned_keyword = _normalize_text(keyword)
+    if not cleaned_keyword:
+        return False
+    pattern = rf"\b{re.escape(cleaned_keyword)}\b"
+    return re.search(pattern, text) is not None
+
+
+def _heuristic_insight(event: EventCard, target_major: str) -> RecommendationInsight:
+    profile = _cs_keyword_profile(target_major)
+    combined = _normalize_text(" ".join([event.title, event.description, event.category, *event.tags, *event.audience]))
+
+    matched_keywords = [keyword for keyword in profile["keywords"] if _keyword_in_text(combined, keyword)]
+    matched_keywords = _normalize_keywords(matched_keywords)
+
+    score = 0.0
+    for keyword in matched_keywords:
+        score += profile["keywords"].get(_normalize_text(keyword), 1.0)
+    score += profile["categories"].get(event.category, 0.0)
+    for audience_term in event.audience:
+        score += profile["keywords"].get(_normalize_text(audience_term), 0.0) * 0.5
+
+    if matched_keywords:
+        reason = f"Matches {target_major} keywords: {', '.join(matched_keywords[:3])}."
+    else:
+        reason = f"General campus event for {target_major} students."
+
+    return RecommendationInsight(
+        event_id=event.id,
+        match_score=min(100.0, round(score * 12.5, 2)),
+        matched_keywords=matched_keywords,
+        reason=reason,
+    )
+
+
+def _heuristic_insights(events: List[EventCard], target_major: str) -> tuple[dict[str, RecommendationInsight], bool]:
+    return ({event.id: _heuristic_insight(event, target_major) for event in events}, False)
+
+
+def _parse_ai_insights(raw_content: str, events: List[EventCard], target_major: str) -> dict[str, RecommendationInsight]:
+    event_lookup = {event.id: event for event in events}
+    fallback_insights, _ = _heuristic_insights(events, target_major)
+    insights = dict(fallback_insights)
+
+    try:
+        parsed = json.loads(_strip_code_fences(raw_content))
+    except Exception:
+        return insights
+
+    if isinstance(parsed, dict):
+        rows = parsed.get("analyses") or parsed.get("events") or []
+    elif isinstance(parsed, list):
+        rows = parsed
+    else:
+        rows = []
+
+    for row in rows:
+        try:
+            event_id = str(row.get("event_id") or "").strip()
+            if event_id not in event_lookup:
+                continue
+            match_score = float(row.get("match_score") or 0.0)
+            matched_keywords = _normalize_keywords(list(row.get("matched_keywords") or []))
+            reason = _clean_text(str(row.get("reason") or ""))
+            if not reason:
+                reason = insights[event_id].reason
+            insights[event_id] = RecommendationInsight(
+                event_id=event_id,
+                match_score=max(0.0, min(100.0, round(match_score, 2))),
+                matched_keywords=matched_keywords,
+                reason=reason,
             )
+        except Exception:
+            continue
+
+    return insights
+
+
+def _ai_insights_for_events(events: List[EventCard], target_major: str) -> tuple[dict[str, RecommendationInsight], bool]:
+    if not AI_RECOMMENDER_ENABLED:
+        return _heuristic_insights(events, target_major)
+
+    signature = _event_signature(events, target_major)
+    with _ai_insight_cache_lock:
+        cached = _ai_insight_cache.get(signature)
+        if cached is not None:
+            return cached, True
+
+    prompt_events = [
+        {
+            "event_id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "category": event.category,
+            "tags": event.tags,
+            "audience": event.audience,
+        }
+        for event in events
+    ]
+
+    system_prompt = (
+        "You rank UW Bothell events for a target major student. "
+        "Return only valid JSON with an 'analyses' array. "
+        "For each event, provide event_id, match_score from 0 to 100, matched_keywords, and a short reason. "
+        "Matched keywords should be short phrases from the title or description whenever possible. "
+        "Score high for directly relevant events and low for unrelated ones. "
+        "Prioritize computing, programming, software, AI, cybersecurity, data, systems, cloud, web, hackathons, internships, resume help, and research for computer science. "
+        "If a different target major is provided, adapt the relevance to that major."
+    )
+
+    user_prompt = json.dumps(
+        {
+            "target_major": target_major,
+            "events": prompt_events,
+            "output_schema": {
+                "analyses": [
+                    {
+                        "event_id": "string",
+                        "match_score": 0,
+                        "matched_keywords": ["keyword"],
+                        "reason": "short sentence",
+                    }
+                ]
+            },
+        },
+        ensure_ascii=True,
+    )
+
+    try:
+        client = _get_ai_client()
+        response = client.chat.completions.create(
+            model=AI_RECOMMENDER_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0,
+            max_tokens=1200,
         )
+        content = response.choices[0].message.content or ""
+        insights = _parse_ai_insights(content, events, target_major)
+        with _ai_insight_cache_lock:
+            _ai_insight_cache[signature] = insights
+        return insights, True
+    except Exception:
+        return _heuristic_insights(events, target_major)
+
+
+def _build_event_catalog(limit: int = 60) -> List[EventCard]:
+    catalog: List[EventCard] = []
+    for event_data in fetch_calendar_events(limit=limit):
+        try:
+            catalog.append(
+                EventCard(
+                    id=str(event_data["id"]),
+                    title=str(event_data["title"]),
+                    description=str(event_data["description"]),
+                    building_name=str(event_data["building_name"]),
+                    coordinates=list(event_data["coordinates"]),
+                    category=str(event_data["category"]),
+                    tags=list(event_data["tags"]),
+                    audience=list(event_data["audience"]),
+                    start_time=str(event_data["start_time"]),
+                    end_time=str(event_data["end_time"]),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
     return catalog
 
 
@@ -416,7 +654,17 @@ class RecommendationStore:
         self.launch_started_at = self._read_launch_started_at()
         self.events = _build_event_catalog()
         self.interactions: List[InteractionRecord] = []
-        self.seed_demo_data()
+        
+
+    def _current_events(self) -> List[EventCard]:
+        events = _build_event_catalog()
+        if events:
+            with self._lock:
+                self.events = events
+            return events
+
+        with self._lock:
+            return list(self.events)
 
     def _read_launch_started_at(self) -> datetime:
         raw_value = os.getenv("CAMPUS_PULSE_LAUNCH_STARTED_AT")
@@ -427,7 +675,7 @@ class RecommendationStore:
                 pass
         return datetime.now(timezone.utc) - timedelta(days=GRACE_PERIOD_DAYS + 1)
 
-    def reset(self, seed_demo: bool = True) -> None:
+    def reset(self, seed_demo: bool = False) -> None:
         with self._lock:
             self.launch_started_at = self._read_launch_started_at()
             self.events = _build_event_catalog()
@@ -438,85 +686,17 @@ class RecommendationStore:
     def seed_demo_data(self) -> None:
         if os.getenv("CAMPUS_PULSE_DISABLE_RECOMMENDER_SEED", "0") == "1":
             return
-
-        demo_plans: dict[str, list[str]] = {
-            "demo-student-1": [
-                "evt-ai-careers",
-                "evt-hackathon",
-                "evt-resume-lab",
-                "evt-library-office-hours",
-                "evt-ai-careers",
-                "evt-hackathon",
-                "evt-resume-lab",
-                "evt-leadership-workshop",
-                "evt-poster-session",
-                "evt-club-fair",
-            ],
-            "demo-student-2": [
-                "evt-biology-lecture",
-                "evt-poster-session",
-                "evt-library-office-hours",
-                "evt-mindful-movement",
-                "evt-biology-lecture",
-                "evt-nursing-circle",
-                "evt-library-office-hours",
-                "evt-club-fair",
-                "evt-transfer-mixer",
-                "evt-leadership-workshop",
-            ],
-            "demo-student-3": [
-                "evt-entrepreneurship-lunch",
-                "evt-resume-lab",
-                "evt-leadership-workshop",
-                "evt-transfer-mixer",
-                "evt-club-fair",
-                "evt-entrepreneurship-lunch",
-                "evt-resume-lab",
-                "evt-leadership-workshop",
-                "evt-ai-careers",
-                "evt-mindful-movement",
-            ],
-            "demo-student-4": [
-                "evt-nursing-circle",
-                "evt-mindful-movement",
-                "evt-club-fair",
-                "evt-library-office-hours",
-                "evt-transfer-mixer",
-                "evt-nursing-circle",
-                "evt-mindful-movement",
-                "evt-club-fair",
-                "evt-leadership-workshop",
-                "evt-library-office-hours",
-            ],
-            "demo-student-5": [
-                "evt-leadership-workshop",
-                "evt-transfer-mixer",
-                "evt-club-fair",
-                "evt-resume-lab",
-                "evt-mindful-movement",
-                "evt-leadership-workshop",
-                "evt-transfer-mixer",
-                "evt-club-fair",
-                "evt-entrepreneurship-lunch",
-                "evt-library-office-hours",
-            ],
-            "demo-student-6": [
-                "evt-club-fair",
-                "evt-mindful-movement",
-                "evt-library-office-hours",
-                "evt-transfer-mixer",
-                "evt-resume-lab",
-                "evt-club-fair",
-                "evt-mindful-movement",
-                "evt-library-office-hours",
-                "evt-ai-careers",
-                "evt-entrepreneurship-lunch",
-            ],
-        }
+        event_ids = [event.id for event in self._current_events()]
+        if not event_ids:
+            return
 
         interaction_cycle = ["view", "click", "save", "view", "click"]
-        for user_token, event_ids in demo_plans.items():
-            for index, event_id in enumerate(event_ids):
+        demo_users = [f"demo-student-{index}" for index in range(1, 7)]
+
+        for user_index, user_token in enumerate(demo_users):
+            rotated_event_ids = event_ids[user_index:] + event_ids[:user_index]
+            for index in range(10):
+                event_id = rotated_event_ids[index % len(rotated_event_ids)]
                 interaction_type = interaction_cycle[index % len(interaction_cycle)]
                 self.record_interaction(user_token, event_id, interaction_type, seed_only=True)
 
@@ -646,53 +826,74 @@ class RecommendationStore:
     ) -> RecommendationResponse:
         user_token_hash = _hash_user_token(user_token)
         major_label, major_profile, major_source = _resolve_major_profile(major)
+        target_major = major_label or _format_title(AI_RECOMMENDER_TARGET_MAJOR)
+        if major_label:
+            major_source = "request"
+        else:
+            major_source = "default-ai-profile"
 
         interactions = self._snapshot()
         event_popularity, user_event_weights, cooccurrence, user_counts = self._aggregate_state(interactions)
         user_history = user_event_weights.get(user_token_hash, Counter())
+        current_events = self._current_events()
 
         global_interaction_count = len(interactions)
         user_interaction_count = user_counts.get(user_token_hash, 0)
         grace_period_active = self._grace_period_active()
-        model_ready = (
-            global_interaction_count >= GLOBAL_ACTIVATION_THRESHOLD
-            and user_interaction_count >= USER_ACTIVATION_THRESHOLD
-            and not grace_period_active
-        )
-        mode = self._mode_for_context(model_ready, major_profile)
+        insights, ai_available = _ai_insights_for_events(current_events, target_major)
+        model_ready = ai_available
+        mode = "ai-match" if ai_available else "keyword-fallback"
+
+        if not current_events:
+            return RecommendationResponse(
+                user_token_hash=user_token_hash,
+                major=major_label,
+                major_source=major_source,
+                mode=mode,
+                model_ready=model_ready,
+                grace_period_active=grace_period_active,
+                global_interaction_count=global_interaction_count,
+                user_interaction_count=user_interaction_count,
+                ai_available=ai_available,
+                ai_target_major=target_major,
+                fallback_reason="UW Bothell calendar returned no current events.",
+                generated_at=datetime.now(timezone.utc).isoformat(),
+                recommendations=[],
+            )
 
         max_popularity = max((float(value) for value in event_popularity.values()), default=1.0)
         cards: List[RecommendationCard] = []
 
-        for event in self.events:
+        for event in current_events:
+            insight = insights.get(event.id) or RecommendationInsight(
+                event_id=event.id,
+                match_score=0.0,
+                matched_keywords=[],
+                reason="No recommendation insight available.",
+            )
             popularity_score = math.log1p(float(event_popularity.get(event.id, 0.0))) / math.log1p(max_popularity)
-            major_score = self._major_affinity_score(event, major_profile)
+            major_score = self._major_affinity_score(event, major_profile or _cs_keyword_profile(target_major))
             recency_score = self._recency_score(event)
-            collaborative_score = 0.0
-
-            if model_ready:
-                collaborative_score = self._collaborative_score(event.id, user_history, event_popularity, cooccurrence)
 
             already_seen = event.id in user_history
             seen_penalty = 1.2 if already_seen else 0.0
 
-            score = (
-                popularity_score * 1.4
-                + major_score * 0.9
-                + recency_score * 0.75
-                + collaborative_score * 1.6
-                - seen_penalty
-            )
-
-            why = self._format_reason(
-                mode=mode,
-                major_label=major_label,
-                major_score=major_score,
-                collaborative_score=collaborative_score,
-                popularity_score=popularity_score,
-                recency_score=recency_score,
-                already_seen=already_seen,
-            )
+            if ai_available:
+                score = (
+                    (insight.match_score / 10.0)
+                    + recency_score * 1.25
+                    + popularity_score * 1.0
+                    - seen_penalty
+                )
+                why = insight.reason
+            else:
+                score = (
+                    major_score * 1.5
+                    + recency_score * 1.25
+                    + popularity_score * 1.0
+                    - seen_penalty
+                )
+                why = insight.reason
 
             cards.append(
                 RecommendationCard(
@@ -700,6 +901,8 @@ class RecommendationStore:
                     rank=0,
                     score=round(score, 3),
                     why=why,
+                    ai_score=round(insight.match_score, 2),
+                    matched_keywords=insight.matched_keywords,
                 )
             )
 
@@ -711,10 +914,8 @@ class RecommendationStore:
         fallback_reason: Optional[str] = None
         if grace_period_active:
             fallback_reason = "Two-week deployment grace period is active."
-        elif mode == "major-seeded" and major_profile:
-            fallback_reason = "Using major-seeded ranking until both interaction thresholds are met."
-        elif mode == "popularity" and not major_profile:
-            fallback_reason = "Major profile unavailable; showing popularity-ranked events."
+        elif not ai_available:
+            fallback_reason = f"AI scoring unavailable; using keyword fallback for {target_major} students."
 
         return RecommendationResponse(
             user_token_hash=user_token_hash,
@@ -725,6 +926,8 @@ class RecommendationStore:
             grace_period_active=grace_period_active,
             global_interaction_count=global_interaction_count,
             user_interaction_count=user_interaction_count,
+            ai_available=ai_available,
+            ai_target_major=target_major,
             fallback_reason=fallback_reason,
             generated_at=datetime.now(timezone.utc).isoformat(),
             recommendations=limited_cards,
@@ -746,7 +949,7 @@ class RecommendationStore:
         major: Optional[str] = None,
         seed_only: bool = False,
     ) -> InteractionResponse:
-        event_ids = {event.id for event in self.events}
+        event_ids = {event.id for event in self._current_events()}
         if event_id not in event_ids:
             raise ValueError(f"Unknown event_id: {event_id}")
 

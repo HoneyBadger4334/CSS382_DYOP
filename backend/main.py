@@ -10,11 +10,13 @@ from pydantic import BaseModel
 
 from building_coords import resolve_coordinates, CAMPUS_CENTER
 from recommender import (
+    EventCard,
     InteractionRequest,
     InteractionResponse,
     RecommendationResponse,
     store as recommendation_store,
 )
+from calendar_fetcher import fetch_calendar_events
 from rss_fetcher import fetch_alerts
 from nlp_summarizer import summarize
 
@@ -153,6 +155,11 @@ async def get_recommendations(
     limit: int = 6,
 ) -> RecommendationResponse:
     return recommendation_store.get_recommendations(user_token=user_token, major=major, limit=limit)
+
+
+@app.get("/api/events", response_model=list[EventCard])
+async def get_events(limit: int = 60) -> list[EventCard]:
+    return [EventCard.model_validate(event) for event in fetch_calendar_events(limit=limit)]
 
 
 @app.post("/api/recommendations/interactions", response_model=InteractionResponse)

@@ -407,6 +407,10 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .dashboard-panel {
+    order: -1;
+  }
+
   .dashboard-map {
     min-height: 54vh;
   }
