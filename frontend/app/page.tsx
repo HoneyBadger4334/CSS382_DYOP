@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
 import AlertBanner from "@/components/AlertBanner";
-import LoginPanel from "@/components/LoginPanel";
 import RecommendationsPanel from "@/components/RecommendationsPanel";
 import type { AlertPin } from "@/components/CampusMap";
 
@@ -20,46 +20,66 @@ interface AlertsResponse {
   feed_available: boolean;
 }
 
+async function sha256(value: string) {
+  const encoded = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export default function HomePage() {
+  const { user, error: authError, isLoading: authLoading } = useUser();
   const [data, setData] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [netid, setNetid] = useState<string | null>(null);
   const [hashedNetid, setHashedNetid] = useState<string | null>(null);
-  const [showLogin, setShowLogin] = useState(false);
   const [major, setMajor] = useState<string | null>(null);
 
-  // Restore session from localStorage on mount
   useEffect(() => {
-    const storedNetid = localStorage.getItem("netid_display");
-    const storedHash = localStorage.getItem("hashed_netid");
     const storedMajor = localStorage.getItem("major");
-    if (storedNetid && storedHash) {
-      setNetid(storedNetid);
-      setHashedNetid(storedHash);
-    }
     if (storedMajor) setMajor(storedMajor);
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setNetid(null);
+      setHashedNetid(null);
+      return;
+    }
+
+    const displayName = user.name ?? user.email ?? user.nickname ?? user.sub ?? "Signed in user";
+    setNetid(displayName);
+
+    const sourceId = user.sub ?? displayName;
+    const storedSource = localStorage.getItem("hashed_netid_source");
+    const storedHash = localStorage.getItem("hashed_netid");
+
+    if (storedSource === sourceId && storedHash) {
+      setHashedNetid(storedHash);
+      return;
+    }
+
+    async function createHash() {
+      const hashed = await sha256(sourceId);
+      localStorage.setItem("hashed_netid", hashed);
+      localStorage.setItem("hashed_netid_source", sourceId);
+      setHashedNetid(hashed);
+    }
+
+    createHash();
+  }, [user]);
 
   function handleMajorChange(m: string) {
     localStorage.setItem("major", m);
     setMajor(m);
   }
 
-  function handleLogin(rawNetid: string, hashed: string) {
-    localStorage.setItem("netid_display", rawNetid);
-    localStorage.setItem("hashed_netid", hashed);
-    setNetid(rawNetid);
-    setHashedNetid(hashed);
-    setShowLogin(false);
-  }
-
   function handleLogout() {
-    localStorage.removeItem("netid_display");
-    localStorage.removeItem("hashed_netid");
     localStorage.removeItem("major");
-    setNetid(null);
-    setHashedNetid(null);
-    setMajor(null);
+    localStorage.removeItem("hashed_netid");
+    localStorage.removeItem("hashed_netid_source");
+    window.location.href = "/api/auth/logout";
   }
 
   async function fetchAlerts() {
@@ -163,8 +183,8 @@ export default function HomePage() {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowLogin(true)}
+            <a
+              href="/api/auth/login"
               style={{
                 fontSize: 12,
                 color: "#7dd3fc",
@@ -172,19 +192,15 @@ export default function HomePage() {
                 border: "1px solid #1e3a5f",
                 borderRadius: 6,
                 padding: "5px 12px",
-                cursor: "pointer",
+                textDecoration: "none",
                 fontWeight: 600,
               }}
             >
-              Sign in with NetID
-            </button>
+              {authLoading ? "Loading auth…" : "Sign in with Auth0"}
+            </a>
           )}
         </div>
       </header>
-
-      {showLogin && (
-        <LoginPanel onLogin={handleLogin} onClose={() => setShowLogin(false)} />
-      )}
 
       {/* Status banners */}
       {data && (

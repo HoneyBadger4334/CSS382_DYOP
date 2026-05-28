@@ -43,6 +43,8 @@ uvicorn main:app --reload --port 8000
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local
+# Edit .env.local and add your Auth0 settings
 npm run dev         # opens http://localhost:3000
 ```
 
