@@ -22,6 +22,7 @@ from database import log_interaction, hash_netid
 from recommender import get_recommendations
 from events_fetcher import fetch_live_events
 from events import update_live_cache
+from bus_fetcher import fetch_all_stops
 
 load_dotenv()
 
@@ -166,6 +167,12 @@ async def startup_event() -> None:
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.get("/api/buses")
+async def get_buses() -> dict:
+    stops = await asyncio.get_event_loop().run_in_executor(None, fetch_all_stops)
+    return {"stops": stops}
+
 
 @app.get("/api/events")
 async def get_events() -> dict:

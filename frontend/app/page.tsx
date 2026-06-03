@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import AlertBanner from "@/components/AlertBanner";
 import RecommendationsPanel from "@/components/RecommendationsPanel";
-import type { AlertPin } from "@/components/CampusMap";
+import type { AlertPin, BusStop } from "@/components/CampusMap";
 import { API_URL } from "@/lib/config";
 import { useWindowWidth } from "@/lib/useWindowWidth";
 import { colors, severity as sev } from "@/lib/tokens";
@@ -34,6 +34,7 @@ export default function HomePage() {
   const { user, error: authError, isLoading: authLoading } = useUser();
   const [data, setData] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busStops, setBusStops] = useState<BusStop[]>([]);
   const [netid, setNetid] = useState<string | null>(null);
   const [hashedNetid, setHashedNetid] = useState<string | null>(null);
   const [major, setMajor] = useState<string | null>(null);
@@ -106,10 +107,26 @@ export default function HomePage() {
     }
   }
 
+  async function fetchBuses() {
+    try {
+      const res = await fetch(`${API_URL}/api/buses`);
+      if (!res.ok) return;
+      const json = await res.json();
+      setBusStops(json.stops ?? []);
+    } catch {
+      // Non-critical — map still works without bus data
+    }
+  }
+
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, POLL_MS);
-    return () => clearInterval(interval);
+    fetchBuses();
+    const alertInterval = setInterval(fetchAlerts, POLL_MS);
+    const busInterval = setInterval(fetchBuses, 60_000);
+    return () => {
+      clearInterval(alertInterval);
+      clearInterval(busInterval);
+    };
   }, []);
 
   const alerts = data?.alerts ?? [];
@@ -296,7 +313,7 @@ export default function HomePage() {
               Loading campus map…
             </div>
           )}
-          <CampusMap alerts={alerts} />
+          <CampusMap alerts={alerts} busStops={busStops} />
         </div>
 
         {effectiveHash && (
@@ -322,20 +339,16 @@ export default function HomePage() {
       >
         {(["high", "medium", "low"] as const).map((level) => (
           <div key={level} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                background: sev[level].pin,
-                display: "inline-block",
-              }}
-            />
+            <span style={{ width: 12, height: 12, borderRadius: "50%", background: sev[level].pin, display: "inline-block" }} />
             <span style={{ fontSize: 11, color: colors.textMuted }}>
               {level.charAt(0).toUpperCase() + level.slice(1)} severity
             </span>
           </div>
         ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 12, height: 12, borderRadius: "50%", background: colors.busBg, border: `2px solid ${colors.busPin}`, display: "inline-block" }} />
+          <span style={{ fontSize: 11, color: colors.textMuted }}>Bus stop</span>
+        </div>
         <span style={{ marginLeft: "auto", fontSize: 11, color: colors.textDimmer }}>
           Click a pin for details
         </span>

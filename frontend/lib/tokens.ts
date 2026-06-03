@@ -38,6 +38,10 @@ export const colors = {
   lowBorder: "#22c55e",
   lowText:   "#86efac",
 
+  // Bus stops
+  busPin:   "#0ea5e9",  // sky-500
+  busBg:    "#0c4a6e",  // sky-950
+
   // Alert banner
   bannerAiBg:     "#7c2d12",
   bannerAiText:   "#fed7aa",
