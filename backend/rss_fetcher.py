@@ -1,5 +1,6 @@
 import feedparser
 import hashlib
+import traceback
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -29,6 +30,7 @@ def fetch_alerts(use_seed_on_empty: bool = True) -> tuple[list[dict], bool]:
     try:
         feed = feedparser.parse(UW_ALERTS_RSS)
         if feed.bozo and not feed.entries:
+            print(f"[rss_fetcher] Feed parse error: {feed.bozo_exception}")
             raise ValueError("Feed parse error")
 
         alerts = []
@@ -44,7 +46,9 @@ def fetch_alerts(use_seed_on_empty: bool = True) -> tuple[list[dict], bool]:
             return SEED_ALERTS, True
         return alerts, True
 
-    except Exception:
+    except Exception as e:
+        print(f"[rss_fetcher] Exception fetching RSS: {e}")
+        traceback.print_exc()
         if use_seed_on_empty:
             return SEED_ALERTS, False
         return [], False
