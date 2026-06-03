@@ -18,6 +18,7 @@ const TEAM: { name: string; role: string; contributions: string[] }[] = [
       "Next.js + react-leaflet map",
       "Alert banner and UI components",
       "For You recommendations panel",
+      "Auth0 UW login integration",
     ],
   },
   {
@@ -117,10 +118,10 @@ export default function AboutPage() {
           </h3>
           <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>
             Campus Pulse stores only three fields per interaction: a SHA-256 hashed
-            NetID, an event ID, and a timestamp. No names, emails, or personally
-            identifiable information are stored. Interaction logs older than one
-            academic quarter (90 days) are automatically purged. The project is
-            designed in accordance with UW FERPA guidelines.
+            Auth0 user identifier, an event ID, and a timestamp. No names, emails,
+            or personally identifiable information are stored. Interaction logs older
+            than one academic quarter (90 days) are automatically purged. The project
+            is designed in accordance with UW FERPA guidelines.
           </p>
         </div>
       </main>

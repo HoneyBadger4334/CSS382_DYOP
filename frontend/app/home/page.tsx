@@ -63,7 +63,7 @@ export default function HomePage() {
             {[
               { label: "AI-powered alerts", sub: "GPT-4o-mini NLP" },
               { label: "Personalized feed", sub: "Collaborative filtering" },
-              { label: "FERPA compliant", sub: "Hashed NetID storage" },
+              { label: "FERPA compliant", sub: "Hashed user ID storage" },
               { label: "No account required", sub: "Core map is public" },
             ].map(({ label, sub }) => (
               <div
@@ -129,6 +129,7 @@ export default function HomePage() {
               { layer: "AI Alerts", tech: "GPT-4o-mini (OpenAI)" },
               { layer: "Recommender", tech: "Surprise (SVD)" },
               { layer: "Database",  tech: "PostgreSQL / Supabase" },
+              { layer: "Auth",       tech: "Auth0 (UW login)" },
               { layer: "Deployment", tech: "Vercel + Render" },
             ].map(({ layer, tech }) => (
               <div

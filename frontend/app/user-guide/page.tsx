@@ -18,8 +18,8 @@ const STEPS = [
   },
   {
     n: 4,
-    title: "Sign in with your NetID for personalized recommendations",
-    body: 'Click "Sign in with NetID" in the top-right corner. Enter your UW NetID (e.g. kghale) and click Sign in. Your NetID is hashed before any data is stored — the raw value never leaves your browser session.',
+    title: "Sign in with your UW account for personalized recommendations",
+    body: 'Click "Sign in with Auth0" in the top-right corner. You\'ll be redirected to Auth0 to sign in with your UW email (@uw.edu or @washington.edu). Only UW accounts are accepted — non-UW logins are blocked. Your account identifier is hashed before any data is stored; no personally identifiable information is retained.',
   },
   {
     n: 5,
