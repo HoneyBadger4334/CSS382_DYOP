@@ -19,26 +19,31 @@ const STEPS = [
   },
   {
     n: 4,
-    title: "Sign in with your UW account for personalized recommendations",
-    body: 'Click "Sign in with Auth0" in the top-right corner. You\'ll be redirected to Auth0 to sign in with your UW email (@uw.edu or @washington.edu). Only UW accounts are accepted — non-UW logins are blocked. Your account identifier is hashed before any data is stored; no personally identifiable information is retained.',
+    title: "Sign in with your UW Google account",
+    body: 'Click "Sign in with Auth0" in the top-right corner, then click "Continue with Google" and use your @uw.edu or @washington.edu email. Duo MFA will fire as part of the UW Google login. Only UW accounts are accepted — non-UW logins are blocked. Your account identifier is hashed before any data is stored; no personally identifiable information is retained.',
   },
   {
     n: 5,
     title: "View your For You feed",
-    body: 'After signing in, a "For You" panel appears on the right side of the map. This panel shows a ranked list of upcoming campus events. New users see popularity-ranked events; returning users with enough interaction history receive personalized collaborative-filtering recommendations.',
+    body: 'After signing in, a "For You" panel appears on the right side of the map showing live upcoming UWB campus events pulled from the official UW Bothell events calendar. New users see popularity-ranked events; returning users with enough interaction history receive personalized collaborative-filtering recommendations. Scroll down in the panel to load more events.',
   },
   {
     n: 6,
+    title: "Search events",
+    body: 'Use the search bar in the For You panel to find specific events by title, category, or description. Search looks across all available events — not just the ones currently visible — so you can find anything even if it hasn\'t loaded yet.',
+  },
+  {
+    n: 7,
     title: "Set your major for better cold-start recommendations",
     body: 'Type your major in the field at the top of the For You panel and click Set. This seeds your recommendations with events matching your field of study (e.g. CSS → technology events, Biology → science events). Your major is stored locally and can be updated any time.',
   },
   {
-    n: 7,
-    title: "Click events to register your interest",
-    body: 'Click any event card in the For You panel to log your interest. Clicked events are marked "viewed". Over time, your interaction history improves the quality of your recommendations as the collaborative filtering model learns your preferences.',
+    n: 8,
+    title: "Click events to view details and register your interest",
+    body: 'Click any event card to log your interest and open the event\'s page on the UWB events calendar or Handshake in a new tab. Clicked events are marked "viewed". Over time, your interaction history improves the quality of your recommendations.',
   },
   {
-    n: 8,
+    n: 9,
     title: "Sign out when done",
     body: 'Click "Sign out" in the header to clear your session. The map remains fully functional for anonymous browsing after sign-out.',
   },

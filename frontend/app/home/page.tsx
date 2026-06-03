@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import SiteNav from "@/components/SiteNav";
 import type { AlertPin } from "@/components/CampusMap";
 import { API_URL } from "@/lib/config";
+import { colors, severity as sev } from "@/lib/tokens";
 
 const CampusMap = dynamic(() => import("@/components/CampusMap"), { ssr: false });
 
@@ -13,9 +14,9 @@ const SEVERITIES = ["high", "medium", "low"] as const;
 type Severity = typeof SEVERITIES[number];
 
 const SEVERITY_COLORS: Record<Severity, { bg: string; border: string; text: string }> = {
-  high:   { bg: "#7f1d1d", border: "#ef4444", text: "#fca5a5" },
-  medium: { bg: "#451a03", border: "#f59e0b", text: "#fcd34d" },
-  low:    { bg: "#14532d", border: "#22c55e", text: "#86efac" },
+  high:   sev.high,
+  medium: sev.medium,
+  low:    sev.low,
 };
 
 const DEMO_KEY = "campus_pulse_demos";
