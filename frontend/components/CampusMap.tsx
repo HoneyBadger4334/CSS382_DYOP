@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Tooltip } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { colors, severity as sev } from "@/lib/tokens";
@@ -121,6 +121,15 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
             position={pin.coordinates}
             icon={alertIcon(s.pin)}
           >
+            <Tooltip direction="top" offset={[0, -42]} opacity={1}>
+              <div style={{ fontSize: 12, lineHeight: 1.4 }}>
+                <strong>{pin.incident_type}</strong>
+                <span style={{ marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: s.pin, color: "#fff", fontSize: 10, fontWeight: 700 }}>
+                  {pin.severity.toUpperCase()}
+                </span>
+                <div style={{ color: colors.textDimmer, marginTop: 2 }}>{pin.building_name}</div>
+              </div>
+            </Tooltip>
             <Popup>
               <div style={{ padding: "10px 12px", minWidth: 240 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
@@ -171,6 +180,21 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
           position={[stop.lat, stop.lon]}
           icon={busIcon()}
         >
+          <Tooltip direction="top" offset={[0, -16]} opacity={1}>
+            <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+              <strong>{stop.name}</strong>
+              {stop.arrivals.slice(0, 2).map((a, i) => (
+                <div key={i} style={{ color: colors.textDimmer, marginTop: 2 }}>
+                  <span style={{ fontWeight: 700, color: colors.busPin }}>Route {a.route}</span>
+                  {" — "}
+                  {a.minutes === 0 ? "arriving now" : `${a.minutes} min`}
+                </div>
+              ))}
+              {stop.arrivals.length === 0 && (
+                <div style={{ color: colors.textDimmer, marginTop: 2 }}>No arrivals soon</div>
+              )}
+            </div>
+          </Tooltip>
           <Popup>
             <div style={{ padding: "10px 12px", minWidth: 240 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
