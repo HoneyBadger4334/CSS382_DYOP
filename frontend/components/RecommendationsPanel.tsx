@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { API_URL } from "@/lib/config";
 import { useWindowWidth } from "@/lib/useWindowWidth";
 import { colors } from "@/lib/tokens";
@@ -12,6 +12,7 @@ interface Event {
   building: string;
   date: string;
   description: string;
+  url?: string;
 }
 
 interface Props {
@@ -43,6 +44,9 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
   const [loading, setLoading] = useState(true);
   const [majorInput, setMajorInput] = useState(major ?? "");
   const [clickedIds, setClickedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const [displayCount, setDisplayCount] = useState(10);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchRecommendations();
@@ -50,8 +54,9 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
 
   async function fetchRecommendations() {
     setLoading(true);
+    setDisplayCount(10);
     try {
-      const params = new URLSearchParams({ hashed_netid: hashedNetid, limit: "10" });
+      const params = new URLSearchParams({ hashed_netid: hashedNetid, limit: "200" });
       if (major) params.set("major", major);
       const res = await fetch(`${API_URL}/api/recommendations?${params}`);
       const json = await res.json();
@@ -75,12 +80,39 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
       // Non-critical — don't block the UI
     }
     setClickedIds((prev) => new Set(prev).add(event.id));
+    if (event.url) window.open(event.url, "_blank", "noopener,noreferrer");
   }
 
   function handleMajorSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (majorInput.trim()) onMajorChange(majorInput.trim());
   }
+
+  // Search checks all fetched events regardless of displayCount
+  const filteredEvents = search.trim()
+    ? events.filter((e) =>
+        e.title.toLowerCase().includes(search.toLowerCase()) ||
+        e.description.toLowerCase().includes(search.toLowerCase()) ||
+        e.category.toLowerCase().includes(search.toLowerCase())
+      )
+    : events.slice(0, displayCount);
+
+  const hasMore = !search.trim() && displayCount < events.length;
+
+  // Infinite scroll — load next 10 when sentinel comes into view
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setDisplayCount((prev) => Math.min(prev + 10, events.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, events.length]);
 
   return (
     <aside
@@ -152,6 +184,45 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
             Set
           </button>
         </form>
+
+        <div style={{ marginTop: 8, position: "relative" }}>
+          <input
+            type="text"
+            placeholder="Search events…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%",
+              fontSize: 11,
+              padding: "5px 24px 5px 8px",
+              background: colors.bgPanel,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 4,
+              color: colors.textPrimary,
+              boxSizing: "border-box",
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{
+                position: "absolute",
+                right: 6,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "transparent",
+                border: "none",
+                color: colors.textFaint,
+                fontSize: 12,
+                cursor: "pointer",
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Event list */}
@@ -160,12 +231,12 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
           <div style={{ padding: 16, fontSize: 12, color: colors.textDimmer, textAlign: "center" }}>
             Loading recommendations…
           </div>
-        ) : events.length === 0 ? (
+        ) : filteredEvents.length === 0 ? (
           <div style={{ padding: 16, fontSize: 12, color: colors.textDimmer, textAlign: "center" }}>
-            No events available right now.
+            {search ? `No events matching "${search}"` : "No events available right now."}
           </div>
         ) : (
-          events.map((event) => {
+          filteredEvents.map((event) => {
             const clicked = clickedIds.has(event.id);
             const catColor = CATEGORY_COLOR[event.category] ?? colors.textFaint;
             return (
@@ -206,6 +277,9 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
                   {clicked && (
                     <span style={{ fontSize: 9, color: colors.lowBorder, marginTop: 2 }}>viewed</span>
                   )}
+                  {event.url && (
+                    <span style={{ fontSize: 9, color: colors.textFaint, marginTop: 2, marginLeft: "auto" }}>↗ details</span>
+                  )}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: colors.textSecondary, marginBottom: 4, lineHeight: 1.3 }}>
                   {event.title}
@@ -219,6 +293,16 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
               </div>
             );
           })
+        )}
+
+        {/* Sentinel must be inside the scrollable div to trigger IntersectionObserver */}
+        {hasMore && (
+          <div
+            ref={sentinelRef}
+            style={{ padding: "10px 16px", textAlign: "center", fontSize: 11, color: colors.textFaint }}
+          >
+            Loading more… ({events.length - displayCount} remaining)
+          </div>
         )}
       </div>
 

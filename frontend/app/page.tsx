@@ -41,8 +41,10 @@ export default function HomePage() {
 
   // ?preview=1 — shows the For You panel with a test hash so the events feed
   // can be verified without a working login. Remove before final submission.
-  const isPreview = typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("preview") === "1";
+  const [isPreview, setIsPreview] = useState(false);
+  useEffect(() => {
+    setIsPreview(new URLSearchParams(window.location.search).get("preview") === "1");
+  }, []);
   const effectiveHash = hashedNetid ?? (isPreview ? "preview-test-hash-0000" : null);
 
   useEffect(() => {
