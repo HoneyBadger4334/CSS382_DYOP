@@ -50,8 +50,7 @@ _cache: AlertsResponse = AlertsResponse(
     feed_available=True,
 )
 
-_demo_task: Optional[asyncio.Task] = None
-_pre_demo_cache: Optional[AlertsResponse] = None
+_demo_pins: list[AlertPin] = []
 
 DEMO_SCENARIOS = {
     "high": (
@@ -71,18 +70,6 @@ DEMO_SCENARIOS = {
     ),
 }
 
-# Hardcoded Week 7 test pin — always present until live alerts load.
-TEST_PIN = AlertPin(
-    id="test-week7",
-    raw_text="[Test] UW Bothell Campus Pulse is live.",
-    building_name="UW1",
-    incident_type="Test Pin",
-    severity="low",
-    recommended_action="No action needed. This is a test pin.",
-    coordinates=list(resolve_coordinates("UW1")),
-    published=datetime.now(timezone.utc).isoformat(),
-)
-
 # ── Background refresh ────────────────────────────────────────────────────────
 
 POLL_INTERVAL_SECONDS = 300  # 5 minutes
@@ -91,7 +78,7 @@ POLL_INTERVAL_SECONDS = 300  # 5 minutes
 async def refresh_alerts() -> None:
     global _cache
 
-    raw_alerts, feed_ok = fetch_alerts()
+    raw_alerts, feed_ok = fetch_alerts(use_seed_on_empty=False)
     ai_ok = True
     pins: list[AlertPin] = []
 
@@ -129,10 +116,6 @@ async def refresh_alerts() -> None:
                 )
             )
 
-    # Always keep the Week 7 test pin if there are no live alerts.
-    if not pins:
-        pins = [TEST_PIN]
-
     _cache = AlertsResponse(
         alerts=pins,
         last_updated=datetime.now(timezone.utc).isoformat(),
@@ -159,7 +142,14 @@ async def startup_event() -> None:
 
 @app.get("/api/alerts", response_model=AlertsResponse)
 async def get_alerts() -> AlertsResponse:
-    return _cache
+    if not _demo_pins:
+        return _cache
+    return AlertsResponse(
+        alerts=_cache.alerts + _demo_pins,
+        last_updated=_cache.last_updated,
+        ai_available=_cache.ai_available,
+        feed_available=_cache.feed_available,
+    )
 
 
 @app.get("/api/health")
@@ -191,57 +181,37 @@ async def recommendations(
 
 @app.post("/api/demo")
 async def trigger_demo(building: str = "UW1", severity: str = "high") -> dict:
-    global _cache, _demo_task, _pre_demo_cache
+    global _demo_pins
 
-    if _demo_task and not _demo_task.done():
-        _demo_task.cancel()
-
-    _pre_demo_cache = _cache
-
+    pin_id = f"demo-{int(datetime.now(timezone.utc).timestamp() * 1000)}"
     incident_type, raw_tpl, action_tpl = DEMO_SCENARIOS.get(severity, DEMO_SCENARIOS["high"])
-    raw_text = raw_tpl.format(building=building.upper())
-    action = action_tpl.format(building=building.upper())
 
     demo_pin = AlertPin(
-        id="demo-alert",
-        raw_text=raw_text,
+        id=pin_id,
+        raw_text=raw_tpl.format(building=building.upper()),
         building_name=building.upper(),
         incident_type=incident_type,
         severity=severity,
-        recommended_action=action,
+        recommended_action=action_tpl.format(building=building.upper()),
         coordinates=list(resolve_coordinates(building.upper())),
         published=datetime.now(timezone.utc).isoformat(),
     )
 
-    _cache = AlertsResponse(
-        alerts=[demo_pin],
-        last_updated=datetime.now(timezone.utc).isoformat(),
-        ai_available=True,
-        feed_available=True,
-    )
+    _demo_pins.append(demo_pin)
 
-    async def revert():
-        global _cache, _pre_demo_cache
+    async def remove_pin():
+        global _demo_pins
         await asyncio.sleep(60)
-        if _pre_demo_cache is not None:
-            _cache = _pre_demo_cache
-            _pre_demo_cache = None
+        _demo_pins = [p for p in _demo_pins if p.id != pin_id]
 
-    _demo_task = asyncio.create_task(revert())
-    return {"status": "ok", "building": building.upper(), "severity": severity, "expires_in": 60}
+    asyncio.create_task(remove_pin())
+    return {"status": "ok", "pin_id": pin_id, "building": building.upper(), "severity": severity, "expires_in": 60}
 
 
 @app.post("/api/demo/clear")
 async def clear_demo() -> dict:
-    global _cache, _demo_task, _pre_demo_cache
-
-    if _demo_task and not _demo_task.done():
-        _demo_task.cancel()
-
-    if _pre_demo_cache is not None:
-        _cache = _pre_demo_cache
-        _pre_demo_cache = None
-
+    global _demo_pins
+    _demo_pins = []
     return {"status": "cleared"}
 
 

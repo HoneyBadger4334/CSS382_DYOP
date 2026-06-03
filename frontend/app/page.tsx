@@ -35,6 +35,7 @@ export default function HomePage() {
   const [netid, setNetid] = useState<string | null>(null);
   const [hashedNetid, setHashedNetid] = useState<string | null>(null);
   const [major, setMajor] = useState<string | null>(null);
+  const [showAlertList, setShowAlertList] = useState(false);
 
   useEffect(() => {
     const storedMajor = localStorage.getItem("major");
@@ -145,20 +146,63 @@ export default function HomePage() {
             Project Site
           </a>
 
-          {/* Alert count badge */}
-          <div
-            style={{
-              background: alerts.length > 0 ? "#7f1d1d" : "#1e3a5f",
-              color: alerts.length > 0 ? "#fca5a5" : "#7dd3fc",
-              borderRadius: 20,
-              padding: "4px 12px",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            {loading
-              ? "Loading…"
-              : `${alerts.length} alert${alerts.length !== 1 ? "s" : ""}`}
+          {/* Alert count badge — clickable */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowAlertList((v) => !v)}
+              style={{
+                background: alerts.length > 0 ? "#7f1d1d" : "#1e3a5f",
+                color: alerts.length > 0 ? "#fca5a5" : "#7dd3fc",
+                borderRadius: 20,
+                padding: "4px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                border: "none",
+                cursor: alerts.length > 0 ? "pointer" : "default",
+              }}
+            >
+              {loading ? "Loading…" : `${alerts.length} alert${alerts.length !== 1 ? "s" : ""}`}
+            </button>
+
+            {showAlertList && alerts.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  width: 320,
+                  background: "#1e293b",
+                  border: "1px solid #334155",
+                  borderRadius: 8,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                  zIndex: 2000,
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ padding: "10px 14px", borderBottom: "1px solid #334155", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Active Alerts
+                </div>
+                {alerts.map((alert) => {
+                  const sevColor = alert.severity === "high" ? "#ef4444" : alert.severity === "medium" ? "#f59e0b" : "#22c55e";
+                  return (
+                    <div key={alert.id} style={{ padding: "12px 14px", borderBottom: "1px solid #0f172a", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: sevColor, flexShrink: 0, marginTop: 4 }} />
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", marginBottom: 2 }}>
+                          {alert.incident_type} — {alert.building_name}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.5 }}>
+                          {alert.raw_text.length > 100 ? alert.raw_text.slice(0, 100) + "…" : alert.raw_text}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#475569", marginTop: 4 }}>
+                          {new Date(alert.published).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Auth controls */}

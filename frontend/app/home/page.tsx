@@ -15,49 +15,60 @@ const SEVERITY_COLORS: Record<Severity, { bg: string; border: string; text: stri
   low:    { bg: "#14532d", border: "#22c55e", text: "#86efac" },
 };
 
+const DEMO_KEY = "campus_pulse_demos";
+
+type DemoEntry = { id: string; building: string; severity: Severity; expiresAt: number };
+
 function DemoControls() {
   const [building, setBuilding] = useState("UW1");
   const [severity, setSeverity] = useState<Severity>("high");
-  const [countdown, setCountdown] = useState(0);
-  const [status, setStatus] = useState<"idle" | "active" | "cleared">("idle");
+  const [demos, setDemos] = useState<DemoEntry[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  function clearTimer() {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+  function saveDemos(entries: DemoEntry[]) {
+    localStorage.setItem(DEMO_KEY, JSON.stringify(entries));
+    setDemos(entries);
   }
 
+  function getRemaining(expiresAt: number) {
+    return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+  }
+
+  // Restore from localStorage on mount and tick every second
+  useEffect(() => {
+    const stored = localStorage.getItem(DEMO_KEY);
+    if (stored) {
+      const parsed: DemoEntry[] = JSON.parse(stored).filter((d: DemoEntry) => getRemaining(d.expiresAt) > 0);
+      setDemos(parsed);
+      if (parsed.length !== JSON.parse(stored).length) localStorage.setItem(DEMO_KEY, JSON.stringify(parsed));
+    }
+    timerRef.current = setInterval(() => {
+      setDemos((prev) => {
+        const active = prev.filter((d) => getRemaining(d.expiresAt) > 0);
+        if (active.length !== prev.length) localStorage.setItem(DEMO_KEY, JSON.stringify(active));
+        return active;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
   async function handleTrigger() {
-    clearTimer();
     const res = await fetch(`${API_URL}/api/demo?building=${building}&severity=${severity}`, { method: "POST" });
     if (!res.ok) return;
     const data = await res.json();
-    setCountdown(data.expires_in);
-    setStatus("active");
-    timerRef.current = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearTimer();
-          setStatus("cleared");
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
+    const entry: DemoEntry = { id: data.pin_id, building: data.building, severity, expiresAt: Date.now() + data.expires_in * 1000 };
+    saveDemos([...demos, entry]);
   }
 
-  async function handleClear() {
-    clearTimer();
+  async function handleClearOne(id: string) {
     await fetch(`${API_URL}/api/demo/clear`, { method: "POST" });
-    setCountdown(0);
-    setStatus("cleared");
+    saveDemos(demos.filter((d) => d.id !== id));
   }
 
-  useEffect(() => () => clearTimer(), []);
-
-  const col = SEVERITY_COLORS[severity];
+  async function handleClearAll() {
+    await fetch(`${API_URL}/api/demo/clear`, { method: "POST" });
+    saveDemos([]);
+  }
 
   return (
     <section style={{ padding: "32px 48px", borderBottom: "1px solid #1e293b" }}>
@@ -105,33 +116,47 @@ function DemoControls() {
         {/* Trigger button */}
         <button
           onClick={handleTrigger}
-          style={{ background: col.bg, border: `1px solid ${col.border}`, borderRadius: 6, color: col.text, fontSize: 13, fontWeight: 700, padding: "8px 20px", cursor: "pointer" }}
+          style={{ background: SEVERITY_COLORS[severity].bg, border: `1px solid ${SEVERITY_COLORS[severity].border}`, borderRadius: 6, color: SEVERITY_COLORS[severity].text, fontSize: 13, fontWeight: 700, padding: "8px 20px", cursor: "pointer" }}
         >
-          Trigger Alert
+          Add Alert
         </button>
 
-        {/* Countdown + clear */}
-        {status === "active" && countdown > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "8px 14px", fontSize: 13, color: "#94a3b8" }}>
-              Auto-clear in <strong style={{ color: "#f1f5f9" }}>{countdown}s</strong>
-            </div>
-            <button
-              onClick={handleClear}
-              style={{ background: "transparent", border: "1px solid #334155", borderRadius: 6, color: "#94a3b8", fontSize: 12, padding: "8px 14px", cursor: "pointer" }}
-            >
-              Clear Now
-            </button>
-          </div>
-        )}
-
-        {status === "cleared" && (
-          <div style={{ fontSize: 13, color: "#22c55e" }}>✓ Alert cleared</div>
+        {demos.length > 1 && (
+          <button
+            onClick={handleClearAll}
+            style={{ background: "transparent", border: "1px solid #334155", borderRadius: 6, color: "#94a3b8", fontSize: 12, padding: "8px 14px", cursor: "pointer" }}
+          >
+            Clear All
+          </button>
         )}
       </div>
 
-      <p style={{ fontSize: 12, color: "#475569", marginTop: 16 }}>
-        Injects a live alert onto the map for 60 seconds. The live demo iframe below will update on its next poll (≤30s).
+      {/* Active demo list */}
+      {demos.length > 0 && (
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+          {demos.map((d) => {
+            const c = SEVERITY_COLORS[d.severity];
+            const remaining = getRemaining(d.expiresAt);
+            return (
+              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#0f172a", border: `1px solid ${c.border}44`, borderRadius: 6, padding: "8px 12px" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.border, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: c.text, textTransform: "capitalize", minWidth: 60 }}>{d.severity}</span>
+                <span style={{ fontSize: 12, color: "#f1f5f9", minWidth: 40 }}>{d.building}</span>
+                <span style={{ fontSize: 11, color: "#64748b", flex: 1 }}>auto-clears in {remaining}s</span>
+                <button
+                  onClick={() => handleClearOne(d.id)}
+                  style={{ background: "transparent", border: "1px solid #334155", borderRadius: 4, color: "#64748b", fontSize: 11, padding: "2px 8px", cursor: "pointer" }}
+                >
+                  Clear
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p style={{ fontSize: 12, color: "#475569", marginTop: 12 }}>
+        Each alert appears on the map for 60 seconds. Stack multiple alerts on different buildings simultaneously.
       </p>
     </section>
   );
