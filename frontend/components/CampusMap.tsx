@@ -1,6 +1,7 @@
 "use client";
 
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { colors, severity as sev } from "@/lib/tokens";
 
@@ -40,6 +41,49 @@ const BOUNDS: [[number, number], [number, number]] = [
   [47.766, -122.182],
 ];
 
+function alertIcon(color: string): L.DivIcon {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38">
+      <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 24 14 24s14-13.5 14-24C28 6.27 21.73 0 14 0z"
+        fill="${color}" stroke="white" stroke-width="2.5"/>
+      <circle cx="14" cy="14" r="5.5" fill="white" fill-opacity="0.35"/>
+    </svg>`;
+  return L.divIcon({
+    html: `<div style="filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45))">${svg}</div>`,
+    className: "",
+    iconSize: [28, 38],
+    iconAnchor: [14, 38],
+    popupAnchor: [0, -40],
+  });
+}
+
+function busIcon(): L.DivIcon {
+  const html = `
+    <div style="
+      width: 38px; height: 24px;
+      background: ${colors.busBg};
+      border: 2.5px solid ${colors.busPin};
+      border-radius: 6px;
+      color: ${colors.busPin};
+      font-size: 10px;
+      font-weight: 800;
+      font-family: sans-serif;
+      letter-spacing: 0.05em;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    ">BUS</div>`;
+  return L.divIcon({
+    html,
+    className: "",
+    iconSize: [38, 24],
+    iconAnchor: [19, 12],
+    popupAnchor: [0, -16],
+  });
+}
+
 function formatTime(iso: string): string {
   try {
     return new Date(iso).toLocaleString("en-US", {
@@ -72,16 +116,10 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
       {alerts.map((pin) => {
         const s = sev[pin.severity] ?? sev.medium;
         return (
-          <CircleMarker
+          <Marker
             key={pin.id}
-            center={pin.coordinates}
-            radius={pin.id === "test-week7" ? 10 : 14}
-            pathOptions={{
-              color: s.pin,
-              fillColor: s.pin,
-              fillOpacity: 0.85,
-              weight: 2,
-            }}
+            position={pin.coordinates}
+            icon={alertIcon(s.pin)}
           >
             <Popup>
               <div style={{ padding: "10px 12px", minWidth: 240 }}>
@@ -103,7 +141,16 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
                   </div>
                 )}
 
-                <div style={{ fontSize: 12, color: colors.bgBase, background: pin.safety_brief ? `${s.pin}18` : "#f8fafc", border: pin.safety_brief ? `1px solid ${s.pin}44` : "none", borderRadius: 4, padding: "6px 8px", marginBottom: 6, lineHeight: 1.5 }}>
+                <div style={{
+                  fontSize: 12,
+                  color: colors.bgBase,
+                  background: pin.safety_brief ? `${s.pin}18` : "#f8fafc",
+                  border: pin.safety_brief ? `1px solid ${s.pin}44` : "none",
+                  borderRadius: 4,
+                  padding: "6px 8px",
+                  marginBottom: 6,
+                  lineHeight: 1.5,
+                }}>
                   {pin.safety_brief ?? pin.recommended_action}
                 </div>
 
@@ -113,22 +160,16 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
                 </details>
               </div>
             </Popup>
-          </CircleMarker>
+          </Marker>
         );
       })}
 
       {/* Bus stop pins */}
       {busStops.map((stop) => (
-        <CircleMarker
+        <Marker
           key={stop.id}
-          center={[stop.lat, stop.lon]}
-          radius={10}
-          pathOptions={{
-            color: colors.busPin,
-            fillColor: colors.busBg,
-            fillOpacity: 0.95,
-            weight: 2,
-          }}
+          position={[stop.lat, stop.lon]}
+          icon={busIcon()}
         >
           <Popup>
             <div style={{ padding: "10px 12px", minWidth: 240 }}>
@@ -164,7 +205,7 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
               )}
             </div>
           </Popup>
-        </CircleMarker>
+        </Marker>
       ))}
     </MapContainer>
   );
