@@ -129,7 +129,9 @@ export default function HomePage() {
     };
   }, []);
 
+
   const alerts = data?.alerts ?? [];
+
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -314,6 +316,28 @@ export default function HomePage() {
             </div>
           )}
           <CampusMap alerts={alerts} busStops={busStops} />
+          {!loading && alerts.length === 0 && (
+            <div style={{
+              position: "absolute",
+              top: 12,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 1000,
+              background: colors.lowBg,
+              border: `1px solid ${colors.lowBorder}`,
+              color: colors.lowText,
+              borderRadius: 20,
+              padding: "6px 18px",
+              fontSize: 12,
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              pointerEvents: "none",
+            }}>
+              ✓ No active alerts — campus is clear
+            </div>
+          )}
         </div>
 
         {effectiveHash && (

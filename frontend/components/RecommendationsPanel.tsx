@@ -45,6 +45,7 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
   const [majorInput, setMajorInput] = useState(major ?? "");
   const [clickedIds, setClickedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(10);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +56,7 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
   async function fetchRecommendations() {
     setLoading(true);
     setDisplayCount(10);
+    setSelectedCategory(null);
     try {
       const params = new URLSearchParams({ hashed_netid: hashedNetid, limit: "200" });
       if (major) params.set("major", major);
@@ -88,16 +90,23 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
     if (majorInput.trim()) onMajorChange(majorInput.trim());
   }
 
-  // Search checks all fetched events regardless of displayCount
+  // Derive available categories from fetched events
+  const availableCategories = Array.from(new Set(events.map((e) => e.category))).sort();
+
+  // Apply category + search filters across all events, then paginate
+  const categoryFiltered = selectedCategory
+    ? events.filter((e) => e.category === selectedCategory)
+    : events;
+
   const filteredEvents = search.trim()
-    ? events.filter((e) =>
+    ? categoryFiltered.filter((e) =>
         e.title.toLowerCase().includes(search.toLowerCase()) ||
         e.description.toLowerCase().includes(search.toLowerCase()) ||
         e.category.toLowerCase().includes(search.toLowerCase())
       )
-    : events.slice(0, displayCount);
+    : categoryFiltered.slice(0, displayCount);
 
-  const hasMore = !search.trim() && displayCount < events.length;
+  const hasMore = !search.trim() && displayCount < categoryFiltered.length;
 
   // Infinite scroll — load next 10 when sentinel comes into view
   useEffect(() => {
@@ -137,17 +146,18 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>For You</h2>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>For You</h2>
+            {!loading && events.length > 0 && (
+              <span style={{ fontSize: 10, color: colors.textFaint }}>
+                {search.trim() || selectedCategory
+                  ? `${filteredEvents.length} result${filteredEvents.length !== 1 ? "s" : ""}`
+                  : `${Math.min(displayCount, events.length)} of ${events.length}`}
+              </span>
+            )}
+          </div>
           {mode && (
-            <span
-              style={{
-                fontSize: 10,
-                color: colors.textMuted,
-                background: colors.bgPanel,
-                borderRadius: 10,
-                padding: "2px 8px",
-              }}
-            >
+            <span style={{ fontSize: 10, color: colors.textMuted, background: colors.bgPanel, borderRadius: 10, padding: "2px 8px" }}>
               {MODE_LABEL[mode] ?? mode}
             </span>
           )}
@@ -224,6 +234,42 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
           )}
         </div>
       </div>
+
+      {/* Category filter chips */}
+      {!loading && availableCategories.length > 0 && (
+        <div style={{ padding: "6px 16px 8px", display: "flex", gap: 6, flexWrap: "wrap", borderBottom: `1px solid ${colors.bgPanel}` }}>
+          <button
+            onClick={() => { setSelectedCategory(null); setDisplayCount(10); }}
+            style={{
+              fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 10, cursor: "pointer",
+              background: selectedCategory === null ? colors.blue : colors.bgPanel,
+              color: selectedCategory === null ? "#fff" : colors.textMuted,
+              border: `1px solid ${selectedCategory === null ? colors.blue : colors.border}`,
+            }}
+          >
+            All
+          </button>
+          {availableCategories.map((cat) => {
+            const catColor = CATEGORY_COLOR[cat] ?? colors.textFaint;
+            const active = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => { setSelectedCategory(active ? null : cat); setDisplayCount(10); }}
+                style={{
+                  fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 10, cursor: "pointer",
+                  textTransform: "capitalize",
+                  background: active ? `${catColor}22` : colors.bgPanel,
+                  color: active ? catColor : colors.textMuted,
+                  border: `1px solid ${active ? catColor : colors.border}`,
+                }}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Event list */}
       <div style={{ flex: 1, overflowY: "auto" }}>

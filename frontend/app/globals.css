@@ -15,6 +15,7 @@ body {
 /* Leaflet overrides */
 .leaflet-container {
   font-family: inherit;
+  outline: none;
 }
 
 .leaflet-popup-content-wrapper {

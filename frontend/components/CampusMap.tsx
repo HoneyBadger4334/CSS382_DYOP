@@ -41,15 +41,21 @@ const BOUNDS: [[number, number], [number, number]] = [
   [47.766, -122.182],
 ];
 
-function alertIcon(color: string): L.DivIcon {
+function alertIcon(color: string, isHigh = false): L.DivIcon {
+  const pulse = isHigh ? `
+    <circle cx="14" cy="14" r="13" fill="${color}" opacity="0.5">
+      <animate attributeName="r" from="13" to="38" dur="1.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" from="0.5" to="0" dur="1.8s" repeatCount="indefinite"/>
+    </circle>` : "";
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" overflow="visible">
+      ${pulse}
       <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 24 14 24s14-13.5 14-24C28 6.27 21.73 0 14 0z"
         fill="${color}" stroke="white" stroke-width="2.5"/>
       <circle cx="14" cy="14" r="5.5" fill="white" fill-opacity="0.35"/>
     </svg>`;
   return L.divIcon({
-    html: `<div style="filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45))">${svg}</div>`,
+    html: `<div style="filter:drop-shadow(0 3px 6px rgba(0,0,0,0.45))">${svg}</div>`,
     className: "",
     iconSize: [28, 38],
     iconAnchor: [14, 38],
@@ -119,7 +125,7 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
           <Marker
             key={pin.id}
             position={pin.coordinates}
-            icon={alertIcon(s.pin)}
+            icon={alertIcon(s.pin, pin.severity === "high")}
           >
             <Tooltip direction="top" offset={[0, -42]} opacity={1}>
               <div style={{ fontSize: 12, lineHeight: 1.4 }}>
