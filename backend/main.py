@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from building_coords import resolve_coordinates, CAMPUS_CENTER
 from rss_fetcher import fetch_alerts
-from nlp_summarizer import summarize
+from nlp_summarizer import summarize, triage
 from database import log_interaction, hash_netid
 from recommender import get_recommendations
 from events_fetcher import fetch_live_events
@@ -42,10 +42,12 @@ class AlertPin(BaseModel):
     raw_text: str
     building_name: str
     incident_type: str
-    severity: str          # low | medium | high
+    severity: str                    # low | medium | high
     recommended_action: str
-    coordinates: list[float]  # [lat, lng]
+    coordinates: list[float]         # [lat, lng]
     published: str
+    headline: str | None = None      # smart triage — high severity only
+    safety_brief: str | None = None  # smart triage — high severity only
 
 class AlertsResponse(BaseModel):
     alerts: list[AlertPin]
@@ -99,6 +101,13 @@ async def refresh_alerts() -> None:
 
         if summary:
             coords = resolve_coordinates(summary.building_name)
+            headline = None
+            safety_brief = None
+            if summary.severity == "high":
+                result = triage(raw["raw_text"], summary)
+                if result:
+                    headline = result.headline
+                    safety_brief = result.safety_brief
             pins.append(
                 AlertPin(
                     id=raw["id"],
@@ -109,6 +118,8 @@ async def refresh_alerts() -> None:
                     recommended_action=summary.recommended_action,
                     coordinates=list(coords),
                     published=raw["published"],
+                    headline=headline,
+                    safety_brief=safety_brief,
                 )
             )
         else:
@@ -233,15 +244,28 @@ async def trigger_demo(building: str = "UW1", severity: str = "high") -> dict:
     pin_id = f"demo-{int(datetime.now(timezone.utc).timestamp() * 1000)}"
     incident_type, raw_tpl, action_tpl = DEMO_SCENARIOS.get(severity, DEMO_SCENARIOS["high"])
 
+    raw_text = raw_tpl.format(building=building.upper())
+    action = action_tpl.format(building=building.upper())
+    headline = None
+    safety_brief = None
+    if severity == "high":
+        from nlp_summarizer import AlertSummary
+        mock = AlertSummary(building_name=building.upper(), incident_type=incident_type, severity="high", recommended_action=action)
+        result = triage(raw_text, mock)
+        if result:
+            headline = result.headline
+            safety_brief = result.safety_brief
     demo_pin = AlertPin(
         id=pin_id,
-        raw_text=raw_tpl.format(building=building.upper()),
+        raw_text=raw_text,
         building_name=building.upper(),
         incident_type=incident_type,
         severity=severity,
-        recommended_action=action_tpl.format(building=building.upper()),
+        recommended_action=action,
         coordinates=list(resolve_coordinates(building.upper())),
         published=datetime.now(timezone.utc).isoformat(),
+        headline=headline,
+        safety_brief=safety_brief,
     )
 
     _demo_pins.append(demo_pin)

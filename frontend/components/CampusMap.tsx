@@ -13,6 +13,8 @@ export interface AlertPin {
   recommended_action: string;
   coordinates: [number, number];
   published: string;
+  headline?: string;
+  safety_brief?: string;
 }
 
 export interface BusArrival {
@@ -82,7 +84,7 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
             }}
           >
             <Popup>
-              <div style={{ padding: "10px 12px", minWidth: 220 }}>
+              <div style={{ padding: "10px 12px", minWidth: 240 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                   <strong style={{ fontSize: 14, color: colors.bgBase }}>
                     {pin.incident_type}
@@ -91,12 +93,20 @@ export default function CampusMap({ alerts, busStops = [] }: { alerts: AlertPin[
                     {pin.severity.toUpperCase()}
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: colors.textDimmer, marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: colors.textDimmer, marginBottom: 8 }}>
                   {pin.building_name} · {formatTime(pin.published)}
                 </div>
-                <div style={{ fontSize: 12, color: colors.bgBase, background: "#f8fafc", borderRadius: 4, padding: "6px 8px", marginBottom: 6 }}>
-                  {pin.recommended_action}
+
+                {pin.headline && (
+                  <div style={{ fontSize: 13, fontWeight: 700, color: s.pin, marginBottom: 6, lineHeight: 1.3 }}>
+                    {pin.headline}
+                  </div>
+                )}
+
+                <div style={{ fontSize: 12, color: colors.bgBase, background: pin.safety_brief ? `${s.pin}18` : "#f8fafc", border: pin.safety_brief ? `1px solid ${s.pin}44` : "none", borderRadius: 4, padding: "6px 8px", marginBottom: 6, lineHeight: 1.5 }}>
+                  {pin.safety_brief ?? pin.recommended_action}
                 </div>
+
                 <details style={{ fontSize: 11, color: colors.textFaint }}>
                   <summary style={{ cursor: "pointer" }}>Raw alert</summary>
                   <p style={{ marginTop: 4 }}>{pin.raw_text}</p>

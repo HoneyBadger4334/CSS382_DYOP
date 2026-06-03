@@ -33,11 +33,52 @@ def _get_client() -> OpenAI:
     return _client
 
 
+TRIAGE_PROMPT = """You are a campus safety communications officer for UW Bothell.
+A high-severity emergency alert has just been issued. Write two things:
+
+1. "headline": A single urgent sentence (max 12 words) for a push notification.
+2. "safety_brief": Exactly 3 sentences of calm, actionable safety guidance for students.
+
+Return ONLY valid JSON with keys "headline" and "safety_brief"."""
+
+
 class AlertSummary(BaseModel):
     building_name: str
     incident_type: str
     severity: str
     recommended_action: str
+
+
+class AlertTriage(BaseModel):
+    headline: str
+    safety_brief: str
+
+
+def triage(raw_text: str, summary: AlertSummary) -> AlertTriage | None:
+    """
+    Second GPT call — only fires for severity=high.
+    Generates a push-notification headline and 3-sentence safety brief.
+    """
+    try:
+        context = (
+            f"Incident: {summary.incident_type} at {summary.building_name}.\n"
+            f"Raw alert: {raw_text}"
+        )
+        response = _get_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": TRIAGE_PROMPT},
+                {"role": "user", "content": context},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=200,
+        )
+        data = json.loads(response.choices[0].message.content.strip())
+        return AlertTriage(**data)
+    except Exception as e:
+        logger.error("Triage failed: %s", e)
+        return None
 
 
 def summarize(raw_text: str) -> tuple[AlertSummary | None, bool]:
