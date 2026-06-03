@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import SiteNav from "@/components/SiteNav";
+import type { AlertPin } from "@/components/CampusMap";
+import { API_URL } from "@/lib/config";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://css382-dyop.onrender.com";
+const CampusMap = dynamic(() => import("@/components/CampusMap"), { ssr: false });
 
 const BUILDINGS = ["UW1", "UW2", "LIB", "ARC", "DISC", "HH", "NCH", "CC"];
 const SEVERITIES = ["high", "medium", "low"] as const;
@@ -163,6 +166,15 @@ function DemoControls() {
 }
 
 export default function HomePage() {
+  const [alerts, setAlerts] = useState<AlertPin[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/alerts`)
+      .then((r) => r.json())
+      .then((d) => setAlerts(d.alerts ?? []))
+      .catch(() => {});
+  }, []);
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0f172a" }}>
       <SiteNav />
@@ -259,11 +271,7 @@ export default function HomePage() {
               height: 480,
             }}
           >
-            <iframe
-              src="/"
-              style={{ width: "100%", height: "100%", border: "none" }}
-              title="Campus Pulse Live Map"
-            />
+            <CampusMap alerts={alerts} />
           </div>
           <p style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>
             Live map — pins update every 5 minutes from the UW Alerts RSS feed.
