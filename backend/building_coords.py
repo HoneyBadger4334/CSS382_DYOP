@@ -1,28 +1,26 @@
 from typing import Optional
 
 # UW Bothell campus center — used as fallback pin location
-CAMPUS_CENTER = (47.75940, -122.19030)
+CAMPUS_CENTER = (47.75927, -122.19120)
 
 # Keyed by common abbreviations and full names that the NLP model may return.
 # Coordinates are (lat, lng).
 BUILDING_COORDS: dict[str, tuple[float, float]] = {
-    "UW1": (47.76014, -122.19019),
-    "UW2": (47.75983, -122.18962),
-    "DISC": (47.75824, -122.18872),
-    "DISCOVERY HALL": (47.75824, -122.18872),
-    "STEM": (47.75901, -122.18820),
-    "SCIENCE AND ENGINEERING": (47.75901, -122.18820),
-    "LIB": (47.76072, -122.19153),
-    "LIBRARY": (47.76072, -122.19153),
-    "CAB": (47.75968, -122.19163),
-    "CAMPUS ACTIVITIES BUILDING": (47.75968, -122.19163),
-    "HH": (47.75733, -122.18931),
-    "HUSKY HALL": (47.75733, -122.18931),
-    "NCH": (47.76183, -122.19001),
-    "NORTH CREEK HALL": (47.76183, -122.19001),
-    "CC": (47.75940, -122.19030),
-    "CAMPUS CENTER": (47.75940, -122.19030),
-    "CAMPUS": (47.75940, -122.19030),
+    "UW1": (47.75884, -122.19067),
+    "UW2": (47.75872, -122.19133),
+    "DISC": (47.75902, -122.19201),
+    "DISCOVERY HALL": (47.75902, -122.19201),
+    "LIB": (47.75979, -122.19136),
+    "LIBRARY": (47.75979, -122.19136),
+    "ARC": (47.76005, -122.19033),
+    "ACTIVITIES AND RECREATION CENTER": (47.76005, -122.19033),
+    "HH": (47.76170, -122.19456),
+    "HUSKY HALL": (47.76170, -122.19456),
+    "NCH": (47.76042, -122.19050),
+    "NORTH CREEK HALL": (47.76042, -122.19050),
+    "CC": (47.75927, -122.19120),
+    "CAMPUS CENTER": (47.75927, -122.19120),
+    "CAMPUS": (47.75927, -122.19120),
 }
 
 
