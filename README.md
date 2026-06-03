@@ -5,10 +5,9 @@
 Real-time interactive map of UW Bothell displaying campus events and emergency alerts.
 Built with Next.js, FastAPI, OpenStreetMap (Leaflet), and GPT-4o-mini.
 
-## Live Demo
+## Deployment
 
-**Frontend:** https://css382-dyop.vercel.app  
-**Backend API:** https://css382-dyop.onrender.com
+**Live Site:** https://css382-dyop.vercel.app
 
 ## Stack
 

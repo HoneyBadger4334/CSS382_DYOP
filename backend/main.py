@@ -20,9 +20,9 @@ app = FastAPI(title="Campus Pulse API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://css382-dyop.vercel.app", "http://localhost:3000"],
     allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type"],
 )
 
 # ── In-memory cache ──────────────────────────────────────────────────────────
