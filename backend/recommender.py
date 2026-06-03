@@ -7,7 +7,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 from database import get_all_interactions, get_total_interaction_count, get_user_interaction_count, get_popular_event_ids
-from events import EVENTS, EVENTS_BY_ID, get_events_by_categories, infer_categories_from_major
+from events import get_all_events, get_event_by_id, get_events_by_categories, infer_categories_from_major
 
 GLOBAL_THRESHOLD = 50   # total interactions needed before CF activates
 USER_THRESHOLD = 10     # per-user interactions needed to use CF for that user
@@ -16,15 +16,15 @@ USER_THRESHOLD = 10     # per-user interactions needed to use CF for that user
 def _popularity_fallback(limit: int = 10) -> list[dict]:
     """Most interacted-with events in the past 7 days, falling back to full catalog order."""
     popular_ids = get_popular_event_ids(days=7, limit=limit)
+    all_events = get_all_events()
     if popular_ids:
-        ordered = [EVENTS_BY_ID[eid] for eid in popular_ids if eid in EVENTS_BY_ID]
-        # Append any events not yet in the popular list
+        ordered = [get_event_by_id(eid) for eid in popular_ids if get_event_by_id(eid)]
         seen = set(popular_ids)
-        for e in EVENTS:
+        for e in all_events:
             if e["id"] not in seen:
                 ordered.append(e)
         return ordered[:limit]
-    return EVENTS[:limit]
+    return all_events[:limit]
 
 
 def _coldstart(major: str | None, limit: int = 10) -> list[dict]:
@@ -48,7 +48,6 @@ def _collaborative_filter(hashed_netid: str, limit: int = 10) -> list[dict]:
         return _popularity_fallback(limit)
 
     df = pd.DataFrame(rows)
-    # Every logged interaction is treated as an implicit rating of 1.0
     df["rating"] = 1.0
 
     reader = Reader(rating_scale=(0, 1))
@@ -58,9 +57,8 @@ def _collaborative_filter(hashed_netid: str, limit: int = 10) -> list[dict]:
     model = SVD(n_factors=20, n_epochs=20, random_state=42)
     model.fit(trainset)
 
-    # Score all events this user hasn't already interacted with
     seen_ids = {row["event_id"] for row in rows if row["hashed_netid"] == hashed_netid}
-    candidates = [e for e in EVENTS if e["id"] not in seen_ids]
+    candidates = [e for e in get_all_events() if e["id"] not in seen_ids]
 
     scored = []
     for event in candidates:

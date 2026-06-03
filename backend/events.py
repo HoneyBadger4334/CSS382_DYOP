@@ -37,6 +37,28 @@ EVENTS: list[dict] = [
 
 EVENTS_BY_ID: dict[str, dict] = {e["id"]: e for e in EVENTS}
 
+# ── Live event cache ──────────────────────────────────────────────────────────
+# Populated by the background refresh loop in main.py.
+# Falls back to the static EVENTS catalog if the feed is unavailable.
+
+_live_events: list[dict] = []
+
+
+def update_live_cache(events: list[dict]) -> None:
+    global _live_events
+    _live_events = events
+
+
+def get_all_events() -> list[dict]:
+    return _live_events if _live_events else EVENTS
+
+
+def get_event_by_id(event_id: str) -> dict | None:
+    if _live_events:
+        live_map = {e["id"]: e for e in _live_events}
+        return live_map.get(event_id)
+    return EVENTS_BY_ID.get(event_id)
+
 # Maps declared UW major keywords to event categories for cold-start seeding.
 MAJOR_TO_CATEGORIES: dict[str, list[str]] = {
     "css": ["technology", "business"],
@@ -61,7 +83,7 @@ MAJOR_TO_CATEGORIES: dict[str, list[str]] = {
 
 
 def get_events_by_categories(categories: list[str], limit: int = 10) -> list[dict]:
-    matched = [e for e in EVENTS if e["category"] in categories]
+    matched = [e for e in get_all_events() if e["category"] in categories]
     return matched[:limit]
 
 

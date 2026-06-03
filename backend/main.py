@@ -20,6 +20,8 @@ from rss_fetcher import fetch_alerts
 from nlp_summarizer import summarize
 from database import log_interaction, hash_netid
 from recommender import get_recommendations
+from events_fetcher import fetch_live_events
+from events import update_live_cache
 
 load_dotenv()
 
@@ -140,9 +142,27 @@ async def poll_loop() -> None:
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 
+EVENTS_REFRESH_SECONDS = 3600  # 1 hour
+
+
+async def events_loop() -> None:
+    while True:
+        try:
+            events, ok = await asyncio.get_event_loop().run_in_executor(
+                None, fetch_live_events
+            )
+            if ok and events:
+                update_live_cache(events)
+                logger.info("Events cache updated: %d live events", len(events))
+        except Exception as e:
+            logger.error("events_loop error: %s", e)
+        await asyncio.sleep(EVENTS_REFRESH_SECONDS)
+
+
 @app.on_event("startup")
 async def startup_event() -> None:
     asyncio.create_task(poll_loop())
+    asyncio.create_task(events_loop())
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
