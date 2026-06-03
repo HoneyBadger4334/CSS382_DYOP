@@ -4,7 +4,7 @@ import traceback
 from datetime import datetime, timezone
 from typing import Optional
 
-UW_ALERTS_RSS = "https://www.washington.edu/alert/feed/"
+UW_ALERTS_RSS = "https://www.washington.edu/safety/alert/feed/"
 
 # Sample alerts used when the live RSS feed returns nothing or errors.
 SEED_ALERTS = [
