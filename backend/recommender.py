@@ -1,6 +1,10 @@
+import logging
+
 from surprise import Dataset, Reader, SVD
 from surprise import accuracy
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from database import get_all_interactions, get_total_interaction_count, get_user_interaction_count, get_popular_event_ids
 from events import EVENTS, EVENTS_BY_ID, get_events_by_categories, infer_categories_from_major
@@ -94,7 +98,7 @@ def get_recommendations(
             events = _collaborative_filter(hashed_netid, limit)
             mode = "collaborative-filtering"
         except Exception as e:
-            print(f"[recommender] CF failed, falling back to popularity: {e}")
+            logger.error("CF failed, falling back to popularity: %s", e)
             events = _popularity_fallback(limit)
             mode = "popularity"
 

@@ -1,8 +1,10 @@
 import feedparser
 import hashlib
-import traceback
+import logging
 from datetime import datetime, timezone
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 UW_ALERTS_RSS = "https://www.washington.edu/safety/alert/feed/"
 
@@ -30,7 +32,7 @@ def fetch_alerts(use_seed_on_empty: bool = True) -> tuple[list[dict], bool]:
     try:
         feed = feedparser.parse(UW_ALERTS_RSS)
         if feed.bozo and not feed.entries:
-            print(f"[rss_fetcher] Feed parse error: {feed.bozo_exception}")
+            logger.error("Feed parse error: %s", feed.bozo_exception)
             raise ValueError("Feed parse error")
 
         alerts = []
@@ -47,8 +49,7 @@ def fetch_alerts(use_seed_on_empty: bool = True) -> tuple[list[dict], bool]:
         return alerts, True
 
     except Exception as e:
-        print(f"[rss_fetcher] Exception fetching RSS: {e}")
-        traceback.print_exc()
+        logger.exception("Exception fetching RSS: %s", e)
         if use_seed_on_empty:
             return SEED_ALERTS, False
         return [], False

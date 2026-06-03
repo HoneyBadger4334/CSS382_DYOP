@@ -1,6 +1,9 @@
 import hashlib
+import logging
 import os
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -33,7 +36,7 @@ def log_interaction(hashed_netid: str, event_id: str) -> bool:
         }).execute()
         return True
     except Exception as e:
-        print(f"[database] log_interaction failed: {e}")
+        logger.error("log_interaction failed: %s", e)
         return False
 
 
@@ -49,7 +52,7 @@ def get_user_interaction_count(hashed_netid: str) -> int:
         )
         return result.count or 0
     except Exception as e:
-        print(f"[database] get_user_interaction_count failed: {e}")
+        logger.error("get_user_interaction_count failed: %s", e)
         return 0
 
 
@@ -64,7 +67,7 @@ def get_total_interaction_count() -> int:
         )
         return result.count or 0
     except Exception as e:
-        print(f"[database] get_total_interaction_count failed: {e}")
+        logger.error("get_total_interaction_count failed: %s", e)
         return 0
 
 
@@ -79,7 +82,7 @@ def get_all_interactions() -> list[dict]:
         )
         return result.data or []
     except Exception as e:
-        print(f"[database] get_all_interactions failed: {e}")
+        logger.error("get_all_interactions failed: %s", e)
         return []
 
 
@@ -106,5 +109,5 @@ def get_popular_event_ids(days: int = 7, limit: int = 20) -> list[str]:
         ranked = sorted(counts, key=lambda e: counts[e], reverse=True)
         return ranked[:limit]
     except Exception as e:
-        print(f"[database] get_popular_event_ids failed: {e}")
+        logger.error("get_popular_event_ids failed: %s", e)
         return []

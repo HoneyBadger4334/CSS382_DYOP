@@ -15,8 +15,13 @@ export default function LoginPanel({ onLogin, onClose }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const trimmed = netid.trim();
+    const trimmed = netid.trim().toLowerCase();
     if (!trimmed) return;
+
+    if (!/^[a-z][a-z0-9]{2,7}$/.test(trimmed)) {
+      setError("Enter a valid UW NetID (3–8 characters, letters and numbers only)");
+      return;
+    }
 
     setLoading(true);
     setError("");

@@ -1,7 +1,10 @@
 import json
+import logging
 import os
 from openai import OpenAI
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are a campus safety alert parser for UW Bothell.
 Given raw alert text, return ONLY a valid JSON object — no markdown, no extra text.
@@ -49,15 +52,11 @@ def summarize(raw_text: str) -> tuple[AlertSummary | None, bool]:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": f"Alert text: {raw_text}"},
             ],
+            response_format={"type": "json_object"},
             temperature=0,
             max_tokens=200,
         )
         content = response.choices[0].message.content.strip()
-        # Strip markdown fences if the model wraps with them
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
         data = json.loads(content)
         summary = AlertSummary(**data)
         # Normalize severity

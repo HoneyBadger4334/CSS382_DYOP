@@ -1,7 +1,14 @@
 import asyncio
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Optional
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -129,7 +136,7 @@ async def poll_loop() -> None:
         try:
             await refresh_alerts()
         except Exception as e:
-            print(f"[poll_loop] error: {e}")
+            logger.error("poll_loop error: %s", e)
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 
