@@ -50,6 +50,27 @@ _cache: AlertsResponse = AlertsResponse(
     feed_available=True,
 )
 
+_demo_task: Optional[asyncio.Task] = None
+_pre_demo_cache: Optional[AlertsResponse] = None
+
+DEMO_SCENARIOS = {
+    "high": (
+        "Active Threat",
+        "ACTIVE THREAT reported near {building}. Shelter in place immediately. Lock doors and avoid windows.",
+        "Shelter in place immediately. Lock all doors, stay away from windows. Do not leave until all-clear is issued.",
+    ),
+    "medium": (
+        "Suspicious Activity",
+        "Suspicious activity reported near {building}. Campus safety and police are responding to the scene.",
+        "Avoid the area around {building}. Follow instructions from campus safety officers.",
+    ),
+    "low": (
+        "Minor Incident",
+        "Minor incident reported near {building}. Campus safety is on scene and the situation is under control.",
+        "Avoid the immediate area around {building}. Normal operations may continue elsewhere on campus.",
+    ),
+}
+
 # Hardcoded Week 7 test pin — always present until live alerts load.
 TEST_PIN = AlertPin(
     id="test-week7",
@@ -166,6 +187,62 @@ async def recommendations(
 ) -> dict:
     events, mode = get_recommendations(hashed_netid, major=major, limit=limit)
     return {"events": events, "mode": mode}
+
+
+@app.post("/api/demo")
+async def trigger_demo(building: str = "UW1", severity: str = "high") -> dict:
+    global _cache, _demo_task, _pre_demo_cache
+
+    if _demo_task and not _demo_task.done():
+        _demo_task.cancel()
+
+    _pre_demo_cache = _cache
+
+    incident_type, raw_tpl, action_tpl = DEMO_SCENARIOS.get(severity, DEMO_SCENARIOS["high"])
+    raw_text = raw_tpl.format(building=building.upper())
+    action = action_tpl.format(building=building.upper())
+
+    demo_pin = AlertPin(
+        id="demo-alert",
+        raw_text=raw_text,
+        building_name=building.upper(),
+        incident_type=incident_type,
+        severity=severity,
+        recommended_action=action,
+        coordinates=list(resolve_coordinates(building.upper())),
+        published=datetime.now(timezone.utc).isoformat(),
+    )
+
+    _cache = AlertsResponse(
+        alerts=[demo_pin],
+        last_updated=datetime.now(timezone.utc).isoformat(),
+        ai_available=True,
+        feed_available=True,
+    )
+
+    async def revert():
+        global _cache, _pre_demo_cache
+        await asyncio.sleep(60)
+        if _pre_demo_cache is not None:
+            _cache = _pre_demo_cache
+            _pre_demo_cache = None
+
+    _demo_task = asyncio.create_task(revert())
+    return {"status": "ok", "building": building.upper(), "severity": severity, "expires_in": 60}
+
+
+@app.post("/api/demo/clear")
+async def clear_demo() -> dict:
+    global _cache, _demo_task, _pre_demo_cache
+
+    if _demo_task and not _demo_task.done():
+        _demo_task.cancel()
+
+    if _pre_demo_cache is not None:
+        _cache = _pre_demo_cache
+        _pre_demo_cache = None
+
+    return {"status": "cleared"}
 
 
 class InteractionRequest(BaseModel):
