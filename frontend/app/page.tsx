@@ -6,11 +6,10 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import AlertBanner from "@/components/AlertBanner";
 import RecommendationsPanel from "@/components/RecommendationsPanel";
 import type { AlertPin } from "@/components/CampusMap";
+import { API_URL } from "@/lib/config";
 
 // Leaflet uses browser APIs — must be loaded client-side only.
 const CampusMap = dynamic(() => import("@/components/CampusMap"), { ssr: false });
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://css382-dyop.onrender.com";
 const POLL_MS = 30_000;
 
 interface AlertsResponse {
