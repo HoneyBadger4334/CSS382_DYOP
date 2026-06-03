@@ -168,10 +168,16 @@ async def startup_event() -> None:
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+_bus_cache: list[dict] = []
+
 @app.get("/api/buses")
 async def get_buses() -> dict:
+    global _bus_cache
     stops = await asyncio.get_event_loop().run_in_executor(None, fetch_all_stops)
-    return {"stops": stops}
+    # Only update cache if we got real data — serve stale on API failure
+    if any(s["arrivals"] for s in stops):
+        _bus_cache = stops
+    return {"stops": _bus_cache if _bus_cache else stops}
 
 
 @app.get("/api/events")
