@@ -3,7 +3,7 @@ import SiteNav from "@/components/SiteNav";
 const TEAM: { name: string; role: string; contributions: string[] }[] = [
   // TODO: fill in your team members before final submission
   {
-    name: "Team Member 1",
+    name: "Kyle Hale",
     role: "Full-Stack Lead",
     contributions: [
       "FastAPI backend architecture",
@@ -12,7 +12,7 @@ const TEAM: { name: string; role: string; contributions: string[] }[] = [
     ],
   },
   {
-    name: "Team Member 2",
+    name: "Nehemiah Soebroto",
     role: "Frontend Lead",
     contributions: [
       "Next.js + react-leaflet map",
@@ -21,7 +21,7 @@ const TEAM: { name: string; role: string; contributions: string[] }[] = [
     ],
   },
   {
-    name: "Team Member 3",
+    name: "Andy Vu",
     role: "AI & Data Lead",
     contributions: [
       "Collaborative filtering recommender (Surprise SVD)",

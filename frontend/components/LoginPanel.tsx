@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://css382-dyop.onrender.com";
 
 interface Props {
   onLogin: (netid: string, hashedNetid: string) => void;
