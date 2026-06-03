@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useWindowWidth } from "@/lib/useWindowWidth";
 
 const LINKS = [
   { href: "/home",          label: "Home" },
@@ -13,6 +14,47 @@ const LINKS = [
 
 export default function SiteNav() {
   const pathname = usePathname();
+  const isMobile = useWindowWidth() < 768;
+
+  if (isMobile) {
+    return (
+      <nav
+        style={{
+          width: "100%",
+          background: "#0f172a",
+          borderBottom: "1px solid #1e293b",
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          overflowX: "auto",
+          padding: "0 8px",
+          flexShrink: 0,
+        }}
+      >
+        {LINKS.map(({ href, label }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                flexShrink: 0,
+                padding: "12px 14px",
+                fontSize: 12,
+                fontWeight: active ? 600 : 400,
+                color: active ? "#7dd3fc" : "#94a3b8",
+                borderBottom: active ? "2px solid #3b82f6" : "2px solid transparent",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
 
   return (
     <nav
@@ -60,7 +102,6 @@ export default function SiteNav() {
           );
         })}
       </div>
-
     </nav>
   );
 }

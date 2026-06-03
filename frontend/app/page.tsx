@@ -7,6 +7,7 @@ import AlertBanner from "@/components/AlertBanner";
 import RecommendationsPanel from "@/components/RecommendationsPanel";
 import type { AlertPin } from "@/components/CampusMap";
 import { API_URL } from "@/lib/config";
+import { useWindowWidth } from "@/lib/useWindowWidth";
 
 // Leaflet uses browser APIs — must be loaded client-side only.
 const CampusMap = dynamic(() => import("@/components/CampusMap"), { ssr: false });
@@ -28,6 +29,7 @@ async function sha256(value: string) {
 }
 
 export default function HomePage() {
+  const isMobile = useWindowWidth() < 768;
   const { user, error: authError, isLoading: authLoading } = useUser();
   const [data, setData] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,20 +132,22 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Website link */}
-          <a
-            href="/home"
-            style={{
-              fontSize: 11,
-              color: "#475569",
-              textDecoration: "none",
-              padding: "4px 8px",
-              border: "1px solid #1e293b",
-              borderRadius: 4,
-            }}
-          >
-            Project Site
-          </a>
+          {/* Website link — hidden on mobile */}
+          {!isMobile && (
+            <a
+              href="/home"
+              style={{
+                fontSize: 11,
+                color: "#475569",
+                textDecoration: "none",
+                padding: "4px 8px",
+                border: "1px solid #1e293b",
+                borderRadius: 4,
+              }}
+            >
+              Project Site
+            </a>
+          )}
 
           {/* Alert count badge — clickable */}
           <div style={{ position: "relative" }}>
@@ -207,9 +211,11 @@ export default function HomePage() {
           {/* Auth controls */}
           {netid ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 12, color: "#94a3b8" }}>
-                Signed in as <strong style={{ color: "#f1f5f9" }}>{netid}</strong>
-              </span>
+              {!isMobile && (
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                  Signed in as <strong style={{ color: "#f1f5f9" }}>{netid}</strong>
+                </span>
+              )}
               <button
                 onClick={handleLogout}
                 style={{
@@ -255,8 +261,8 @@ export default function HomePage() {
       )}
 
       {/* Map + optional recommendations panel */}
-      <main style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div style={{ flex: 1, position: "relative" }}>
+      <main style={{ flex: 1, display: "flex", flexDirection: isMobile ? "column" : "row", overflow: "hidden" }}>
+        <div style={{ flex: 1, position: "relative", height: isMobile ? "60vh" : "auto" }}>
           {loading && (
             <div
               style={{

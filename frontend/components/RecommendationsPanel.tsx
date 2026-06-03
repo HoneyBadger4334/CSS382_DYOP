@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API_URL } from "@/lib/config";
+import { useWindowWidth } from "@/lib/useWindowWidth";
 
 interface Event {
   id: string;
@@ -35,6 +36,7 @@ const MODE_LABEL: Record<string, string> = {
 };
 
 export default function RecommendationsPanel({ hashedNetid, major, onMajorChange }: Props) {
+  const isMobile = useWindowWidth() < 768;
   const [events, setEvents] = useState<Event[]>([]);
   const [mode, setMode] = useState("");
   const [loading, setLoading] = useState(true);
@@ -83,10 +85,12 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
   return (
     <aside
       style={{
-        width: 280,
+        width: isMobile ? "100%" : 280,
+        height: isMobile ? "40vh" : "auto",
         flexShrink: 0,
         background: "#0f172a",
-        borderLeft: "1px solid #1e293b",
+        borderLeft: isMobile ? "none" : "1px solid #1e293b",
+        borderTop: isMobile ? "1px solid #1e293b" : "none",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
