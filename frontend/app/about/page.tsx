@@ -1,7 +1,7 @@
 import SiteNav from "@/components/SiteNav";
+import { colors } from "@/lib/tokens";
 
 const TEAM: { name: string; role: string; contributions: string[] }[] = [
-  // TODO: fill in your team members before final submission
   {
     name: "Kyle Hale",
     role: "Full-Stack Lead",
@@ -34,24 +34,24 @@ const TEAM: { name: string; role: string; contributions: string[] }[] = [
 
 export default function AboutPage() {
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0f172a" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: colors.bgBase }}>
       <SiteNav />
 
       <main style={{ flex: 1, overflowY: "auto", padding: "48px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", marginBottom: 8 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>
           About
         </h1>
-        <p style={{ fontSize: 14, color: "#64748b", marginBottom: 12, maxWidth: 560 }}>
+        <p style={{ fontSize: 14, color: colors.textFaint, marginBottom: 12, maxWidth: 560 }}>
           Campus Pulse was built for CSS 382 — Design Your Own Project at UW Bothell.
         </p>
-        <p style={{ fontSize: 14, color: "#64748b", marginBottom: 40, maxWidth: 560, lineHeight: 1.7 }}>
+        <p style={{ fontSize: 14, color: colors.textFaint, marginBottom: 40, maxWidth: 560, lineHeight: 1.7 }}>
           Our goal was to solve a real problem on our own campus: critical information
           scattered across email threads that students ignore. We built a zero-friction,
           real-time map that surfaces that information where students already spend
           their time — in a browser tab.
         </p>
 
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: colors.textPrimary, marginBottom: 20 }}>
           Team
         </h2>
 
@@ -60,21 +60,21 @@ export default function AboutPage() {
             <div
               key={member.name}
               style={{
-                background: "#1e293b",
-                border: "1px solid #334155",
+                background: colors.bgPanel,
+                border: `1px solid ${colors.border}`,
                 borderRadius: 10,
                 padding: "20px 24px",
               }}
             >
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: colors.textPrimary }}>
                   {member.name}
                 </h3>
                 <span
                   style={{
                     fontSize: 11,
-                    color: "#7dd3fc",
-                    background: "#1e3a5f",
+                    color: colors.blueLight,
+                    background: colors.blueDark,
                     borderRadius: 4,
                     padding: "2px 8px",
                   }}
@@ -88,13 +88,13 @@ export default function AboutPage() {
                     key={i}
                     style={{
                       fontSize: 13,
-                      color: "#94a3b8",
+                      color: colors.textMuted,
                       paddingLeft: 14,
                       position: "relative",
                       marginBottom: 4,
                     }}
                   >
-                    <span style={{ position: "absolute", left: 0, color: "#3b82f6" }}>·</span>
+                    <span style={{ position: "absolute", left: 0, color: colors.blue }}>·</span>
                     {c}
                   </li>
                 ))}
@@ -107,16 +107,16 @@ export default function AboutPage() {
           style={{
             marginTop: 40,
             padding: "20px 24px",
-            background: "#1e293b",
-            border: "1px solid #334155",
+            background: colors.bgPanel,
+            border: `1px solid ${colors.border}`,
             borderRadius: 10,
             maxWidth: 600,
           }}
         >
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: colors.textPrimary, marginBottom: 8 }}>
             Data & Privacy
           </h3>
-          <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>
+          <p style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.7, margin: 0 }}>
             Campus Pulse stores only three fields per interaction: a SHA-256 hashed
             Auth0 user identifier, an event ID, and a timestamp. No names, emails,
             or personally identifiable information are stored. Interaction logs older

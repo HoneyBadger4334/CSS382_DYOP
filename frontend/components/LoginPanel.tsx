@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
+import { colors } from "@/lib/tokens";
 
 interface Props {
   onLogin: (netid: string, hashedNetid: string) => void;
@@ -43,7 +44,6 @@ export default function LoginPanel({ onLogin, onClose }: Props) {
   }
 
   return (
-    // Backdrop
     <div
       onClick={onClose}
       style={{
@@ -56,22 +56,21 @@ export default function LoginPanel({ onLogin, onClose }: Props) {
         justifyContent: "center",
       }}
     >
-      {/* Modal — stop clicks from closing */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#1e293b",
-          border: "1px solid #334155",
+          background: colors.bgPanel,
+          border: `1px solid ${colors.border}`,
           borderRadius: 10,
           padding: "28px 32px",
           width: 340,
           boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
         }}
       >
-        <h2 style={{ color: "#f1f5f9", fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
+        <h2 style={{ color: colors.textPrimary, fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
           Sign in with NetID
         </h2>
-        <p style={{ color: "#94a3b8", fontSize: 12, marginBottom: 20 }}>
+        <p style={{ color: colors.textMuted, fontSize: 12, marginBottom: 20 }}>
           Your NetID is hashed before storage — raw credentials never leave your browser.
         </p>
 
@@ -86,9 +85,9 @@ export default function LoginPanel({ onLogin, onClose }: Props) {
               width: "100%",
               padding: "10px 12px",
               borderRadius: 6,
-              border: "1px solid #475569",
-              background: "#0f172a",
-              color: "#f1f5f9",
+              border: `1px solid ${colors.textDimmer}`,
+              background: colors.bgBase,
+              color: colors.textPrimary,
               fontSize: 14,
               marginBottom: 12,
               boxSizing: "border-box",
@@ -106,7 +105,7 @@ export default function LoginPanel({ onLogin, onClose }: Props) {
               style={{
                 flex: 1,
                 padding: "10px 0",
-                background: loading || !netid.trim() ? "#334155" : "#3b82f6",
+                background: loading || !netid.trim() ? colors.border : colors.blue,
                 color: "#fff",
                 border: "none",
                 borderRadius: 6,
@@ -123,8 +122,8 @@ export default function LoginPanel({ onLogin, onClose }: Props) {
               style={{
                 padding: "10px 16px",
                 background: "transparent",
-                color: "#94a3b8",
-                border: "1px solid #334155",
+                color: colors.textMuted,
+                border: `1px solid ${colors.border}`,
                 borderRadius: 6,
                 fontSize: 13,
                 cursor: "pointer",

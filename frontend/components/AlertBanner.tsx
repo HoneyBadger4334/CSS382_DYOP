@@ -1,5 +1,7 @@
 "use client";
 
+import { colors } from "@/lib/tokens";
+
 interface AlertBannerProps {
   aiAvailable: boolean;
   feedAvailable: boolean;
@@ -13,13 +15,12 @@ export default function AlertBanner({ aiAvailable, feedAvailable, lastUpdated }:
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {/* AI unavailable warning — renders within 3 s of API failure */}
       {!aiAvailable && (
         <div
           role="alert"
           style={{
-            background: "#7c2d12",
-            color: "#fed7aa",
+            background: colors.bannerAiBg,
+            color: colors.bannerAiText,
             padding: "8px 16px",
             fontSize: 13,
             fontWeight: 600,
@@ -32,13 +33,12 @@ export default function AlertBanner({ aiAvailable, feedAvailable, lastUpdated }:
         </div>
       )}
 
-      {/* RSS feed unavailable */}
       {!feedAvailable && (
         <div
           role="alert"
           style={{
-            background: "#431407",
-            color: "#fde68a",
+            background: colors.bannerFeedBg,
+            color: colors.bannerFeedText,
             padding: "8px 16px",
             fontSize: 13,
             fontWeight: 600,
@@ -51,11 +51,10 @@ export default function AlertBanner({ aiAvailable, feedAvailable, lastUpdated }:
         </div>
       )}
 
-      {/* Last-updated indicator — always visible */}
       <div
         style={{
           background: "rgba(15,23,42,0.85)",
-          color: "#94a3b8",
+          color: colors.textMuted,
           padding: "4px 12px",
           fontSize: 11,
           textAlign: "right",

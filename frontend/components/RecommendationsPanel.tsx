@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "@/lib/config";
 import { useWindowWidth } from "@/lib/useWindowWidth";
+import { colors } from "@/lib/tokens";
 
 interface Event {
   id: string;
@@ -30,8 +31,8 @@ const CATEGORY_COLOR: Record<string, string> = {
 };
 
 const MODE_LABEL: Record<string, string> = {
-  "cold-start":             "Seeded by major",
-  "popularity":             "Trending on campus",
+  "cold-start":              "Seeded by major",
+  "popularity":              "Trending on campus",
   "collaborative-filtering": "Personalized for you",
 };
 
@@ -64,7 +65,6 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
   }
 
   async function handleEventClick(event: Event) {
-    // Log the interaction
     try {
       await fetch(`${API_URL}/api/interactions`, {
         method: "POST",
@@ -88,9 +88,9 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
         width: isMobile ? "100%" : 280,
         height: isMobile ? "40vh" : "auto",
         flexShrink: 0,
-        background: "#0f172a",
-        borderLeft: isMobile ? "none" : "1px solid #1e293b",
-        borderTop: isMobile ? "1px solid #1e293b" : "none",
+        background: colors.bgBase,
+        borderLeft: isMobile ? "none" : `1px solid ${colors.bgPanel}`,
+        borderTop: isMobile ? `1px solid ${colors.bgPanel}` : "none",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -100,18 +100,18 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
       <div
         style={{
           padding: "14px 16px 10px",
-          borderBottom: "1px solid #1e293b",
+          borderBottom: `1px solid ${colors.bgPanel}`,
           flexShrink: 0,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>For You</h2>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>For You</h2>
           {mode && (
             <span
               style={{
                 fontSize: 10,
-                color: "#94a3b8",
-                background: "#1e293b",
+                color: colors.textMuted,
+                background: colors.bgPanel,
                 borderRadius: 10,
                 padding: "2px 8px",
               }}
@@ -121,7 +121,6 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
           )}
         </div>
 
-        {/* Major input for cold-start seeding */}
         <form onSubmit={handleMajorSubmit} style={{ marginTop: 8, display: "flex", gap: 6 }}>
           <input
             type="text"
@@ -132,10 +131,10 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
               flex: 1,
               fontSize: 11,
               padding: "5px 8px",
-              background: "#1e293b",
-              border: "1px solid #334155",
+              background: colors.bgPanel,
+              border: `1px solid ${colors.border}`,
               borderRadius: 4,
-              color: "#f1f5f9",
+              color: colors.textPrimary,
             }}
           />
           <button
@@ -143,10 +142,10 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
             style={{
               fontSize: 11,
               padding: "5px 8px",
-              background: "#334155",
+              background: colors.border,
               border: "none",
               borderRadius: 4,
-              color: "#94a3b8",
+              color: colors.textMuted,
               cursor: "pointer",
             }}
           >
@@ -158,33 +157,33 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
       {/* Event list */}
       <div style={{ flex: 1, overflowY: "auto" }}>
         {loading ? (
-          <div style={{ padding: 16, fontSize: 12, color: "#475569", textAlign: "center" }}>
+          <div style={{ padding: 16, fontSize: 12, color: colors.textDimmer, textAlign: "center" }}>
             Loading recommendations…
           </div>
         ) : events.length === 0 ? (
-          <div style={{ padding: 16, fontSize: 12, color: "#475569", textAlign: "center" }}>
+          <div style={{ padding: 16, fontSize: 12, color: colors.textDimmer, textAlign: "center" }}>
             No events available right now.
           </div>
         ) : (
           events.map((event) => {
             const clicked = clickedIds.has(event.id);
-            const catColor = CATEGORY_COLOR[event.category] ?? "#64748b";
+            const catColor = CATEGORY_COLOR[event.category] ?? colors.textFaint;
             return (
               <div
                 key={event.id}
                 onClick={() => handleEventClick(event)}
                 style={{
                   padding: "12px 16px",
-                  borderBottom: "1px solid #1e293b",
+                  borderBottom: `1px solid ${colors.bgPanel}`,
                   cursor: "pointer",
-                  background: clicked ? "#1a2744" : "transparent",
+                  background: clicked ? colors.bgClicked : "transparent",
                   transition: "background 0.15s",
                 }}
                 onMouseEnter={(e) => {
-                  if (!clicked) (e.currentTarget as HTMLDivElement).style.background = "#1e293b";
+                  if (!clicked) (e.currentTarget as HTMLDivElement).style.background = colors.bgPanel;
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.background = clicked ? "#1a2744" : "transparent";
+                  (e.currentTarget as HTMLDivElement).style.background = clicked ? colors.bgClicked : "transparent";
                 }}
               >
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
@@ -205,16 +204,16 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
                     {event.category}
                   </span>
                   {clicked && (
-                    <span style={{ fontSize: 9, color: "#22c55e", marginTop: 2 }}>viewed</span>
+                    <span style={{ fontSize: 9, color: colors.lowBorder, marginTop: 2 }}>viewed</span>
                   )}
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", marginBottom: 4, lineHeight: 1.3 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: colors.textSecondary, marginBottom: 4, lineHeight: 1.3 }}>
                   {event.title}
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>
+                <div style={{ fontSize: 11, color: colors.textFaint }}>
                   {event.building} · {event.date}
                 </div>
-                <div style={{ fontSize: 11, color: "#475569", marginTop: 4, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 11, color: colors.textDimmer, marginTop: 4, lineHeight: 1.4 }}>
                   {event.description}
                 </div>
               </div>
@@ -226,9 +225,9 @@ export default function RecommendationsPanel({ hashedNetid, major, onMajorChange
       <div
         style={{
           padding: "8px 16px",
-          borderTop: "1px solid #1e293b",
+          borderTop: `1px solid ${colors.bgPanel}`,
           fontSize: 10,
-          color: "#334155",
+          color: colors.border,
           flexShrink: 0,
         }}
       >

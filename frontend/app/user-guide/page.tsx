@@ -1,4 +1,5 @@
 import SiteNav from "@/components/SiteNav";
+import { colors } from "@/lib/tokens";
 
 const STEPS = [
   {
@@ -45,14 +46,14 @@ const STEPS = [
 
 export default function UserGuidePage() {
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0f172a" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: colors.bgBase }}>
       <SiteNav />
 
       <main style={{ flex: 1, overflowY: "auto", padding: "48px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", marginBottom: 8 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>
           User Guide
         </h1>
-        <p style={{ fontSize: 14, color: "#64748b", marginBottom: 40, maxWidth: 560 }}>
+        <p style={{ fontSize: 14, color: colors.textFaint, marginBottom: 40, maxWidth: 560 }}>
           Step-by-step instructions for using Campus Pulse, from opening the map
           to getting personalized event recommendations.
         </p>
@@ -64,8 +65,8 @@ export default function UserGuidePage() {
               style={{
                 display: "flex",
                 gap: 20,
-                background: "#1e293b",
-                border: "1px solid #334155",
+                background: colors.bgPanel,
+                border: `1px solid ${colors.border}`,
                 borderRadius: 10,
                 padding: "20px 24px",
               }}
@@ -75,9 +76,9 @@ export default function UserGuidePage() {
                   width: 32,
                   height: 32,
                   borderRadius: "50%",
-                  background: "#1e3a5f",
-                  border: "2px solid #3b82f6",
-                  color: "#7dd3fc",
+                  background: colors.blueDark,
+                  border: `2px solid ${colors.blue}`,
+                  color: colors.blueLight,
                   fontSize: 13,
                   fontWeight: 700,
                   display: "flex",
@@ -90,10 +91,10 @@ export default function UserGuidePage() {
                 {step.n}
               </div>
               <div>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: colors.textPrimary, marginBottom: 8 }}>
                   {step.title}
                 </h3>
-                <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>
+                <p style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.7, margin: 0 }}>
                   {step.body}
                 </p>
               </div>

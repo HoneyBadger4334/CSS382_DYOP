@@ -1,10 +1,11 @@
 import SiteNav from "@/components/SiteNav";
+import { colors } from "@/lib/tokens";
 
 const LAYERS = [
   {
     number: "01",
     title: "RSS Ingestion Pipeline",
-    color: "#3b82f6",
+    color: colors.blue,
     details: [
       "Polls the UW Alerts RSS feed every 5 minutes via a FastAPI background task",
       "Caches the last successful fetch with a UTC timestamp",
@@ -55,7 +56,7 @@ const LAYERS = [
   {
     number: "05",
     title: "Database Layer",
-    color: "#f59e0b",
+    color: colors.medBorder,
     details: [
       "PostgreSQL hosted on Supabase (cloud, RBAC restricted to project team)",
       "Stores only three fields per row: hashed user ID, event ID, interaction timestamp — no PII",
@@ -69,14 +70,14 @@ const LAYERS = [
 
 export default function HowItWorksPage() {
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0f172a" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: colors.bgBase }}>
       <SiteNav />
 
       <main style={{ flex: 1, overflowY: "auto", padding: "48px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: "#f1f5f9", marginBottom: 8 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>
           How It Works
         </h1>
-        <p style={{ fontSize: 14, color: "#64748b", marginBottom: 40, maxWidth: 600 }}>
+        <p style={{ fontSize: 14, color: colors.textFaint, marginBottom: 40, maxWidth: 600 }}>
           Campus Pulse is built in four distinct layers. Each layer has a defined
           fallback so the application remains functional even when individual
           components fail.
@@ -87,14 +88,13 @@ export default function HowItWorksPage() {
             <div
               key={layer.number}
               style={{
-                background: "#1e293b",
+                background: colors.bgPanel,
                 border: `1px solid ${layer.color}33`,
                 borderLeft: `4px solid ${layer.color}`,
                 borderRadius: 10,
                 padding: "24px 28px",
               }}
             >
-              {/* Layer header */}
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                 <span
                   style={{
@@ -108,12 +108,11 @@ export default function HowItWorksPage() {
                 >
                   Layer {layer.number}
                 </span>
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: colors.textPrimary }}>
                   {layer.title}
                 </h2>
               </div>
 
-              {/* Data flow swimlane */}
               <div
                 style={{
                   display: "flex",
@@ -128,7 +127,7 @@ export default function HowItWorksPage() {
                   <div key={i} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                     <div
                       style={{
-                        background: "#0f172a",
+                        background: colors.bgBase,
                         border: `1px solid ${layer.color}55`,
                         borderRadius: 6,
                         padding: "6px 12px",
@@ -146,30 +145,20 @@ export default function HowItWorksPage() {
                 ))}
               </div>
 
-              {/* Detail bullets */}
               <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
                 {layer.details.map((detail, i) => (
                   <li
                     key={i}
                     style={{
                       fontSize: 13,
-                      color: "#94a3b8",
+                      color: colors.textMuted,
                       lineHeight: 1.6,
                       paddingLeft: 16,
                       position: "relative",
                       marginBottom: 6,
                     }}
                   >
-                    <span
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        color: layer.color,
-                        fontWeight: 700,
-                      }}
-                    >
-                      ·
-                    </span>
+                    <span style={{ position: "absolute", left: 0, color: layer.color, fontWeight: 700 }}>·</span>
                     {detail}
                   </li>
                 ))}

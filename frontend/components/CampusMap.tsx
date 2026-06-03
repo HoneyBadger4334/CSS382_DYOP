@@ -2,6 +2,7 @@
 
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { colors, severity as sev } from "@/lib/tokens";
 
 export interface AlertPin {
   id: string;
@@ -13,18 +14,6 @@ export interface AlertPin {
   coordinates: [number, number];
   published: string;
 }
-
-const SEVERITY_COLOR: Record<string, string> = {
-  high: "#ef4444",
-  medium: "#f59e0b",
-  low: "#22c55e",
-};
-
-const SEVERITY_LABEL: Record<string, string> = {
-  high: "HIGH",
-  medium: "MEDIUM",
-  low: "LOW",
-};
 
 // UW Bothell campus center and bounding box
 const CENTER: [number, number] = [47.7594, -122.1903];
@@ -62,15 +51,15 @@ export default function CampusMap({ alerts }: { alerts: AlertPin[] }) {
       />
 
       {alerts.map((pin) => {
-        const color = SEVERITY_COLOR[pin.severity] ?? SEVERITY_COLOR.medium;
+        const s = sev[pin.severity] ?? sev.medium;
         return (
           <CircleMarker
             key={pin.id}
             center={pin.coordinates}
             radius={pin.id === "test-week7" ? 10 : 14}
             pathOptions={{
-              color,
-              fillColor: color,
+              color: s.pin,
+              fillColor: s.pin,
               fillOpacity: 0.85,
               weight: 2,
             }}
@@ -85,7 +74,7 @@ export default function CampusMap({ alerts }: { alerts: AlertPin[] }) {
                     marginBottom: 6,
                   }}
                 >
-                  <strong style={{ fontSize: 14, color: "#0f172a" }}>
+                  <strong style={{ fontSize: 14, color: colors.bgBase }}>
                     {pin.incident_type}
                   </strong>
                   <span
@@ -93,25 +82,25 @@ export default function CampusMap({ alerts }: { alerts: AlertPin[] }) {
                       fontSize: 10,
                       fontWeight: 700,
                       color: "#fff",
-                      background: color,
+                      background: s.pin,
                       borderRadius: 4,
                       padding: "2px 6px",
                       marginLeft: 8,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {SEVERITY_LABEL[pin.severity] ?? pin.severity.toUpperCase()}
+                    {pin.severity.toUpperCase()}
                   </span>
                 </div>
 
-                <div style={{ fontSize: 12, color: "#475569", marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: colors.textDimmer, marginBottom: 6 }}>
                   {pin.building_name} · {formatTime(pin.published)}
                 </div>
 
                 <div
                   style={{
                     fontSize: 12,
-                    color: "#1e293b",
+                    color: colors.bgBase,
                     background: "#f8fafc",
                     borderRadius: 4,
                     padding: "6px 8px",
@@ -121,7 +110,7 @@ export default function CampusMap({ alerts }: { alerts: AlertPin[] }) {
                   {pin.recommended_action}
                 </div>
 
-                <details style={{ fontSize: 11, color: "#64748b" }}>
+                <details style={{ fontSize: 11, color: colors.textFaint }}>
                   <summary style={{ cursor: "pointer" }}>Raw alert</summary>
                   <p style={{ marginTop: 4 }}>{pin.raw_text}</p>
                 </details>

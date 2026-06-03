@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWindowWidth } from "@/lib/useWindowWidth";
+import { colors } from "@/lib/tokens";
 
 const LINKS = [
   { href: "/home",          label: "Home" },
@@ -21,7 +22,7 @@ export default function SiteNav() {
       <nav
         style={{
           width: "100%",
-          background: "#0f172a",
+          background: colors.bgBase,
           borderBottom: "1px solid #1e293b",
           display: "flex",
           flexDirection: "row",
@@ -42,7 +43,7 @@ export default function SiteNav() {
                 padding: "12px 14px",
                 fontSize: 12,
                 fontWeight: active ? 600 : 400,
-                color: active ? "#7dd3fc" : "#94a3b8",
+                color: active ? colors.blueLight : colors.textMuted,
                 borderBottom: active ? "2px solid #3b82f6" : "2px solid transparent",
                 textDecoration: "none",
                 whiteSpace: "nowrap",
@@ -61,7 +62,7 @@ export default function SiteNav() {
       style={{
         width: 200,
         flexShrink: 0,
-        background: "#0f172a",
+        background: colors.bgBase,
         borderRight: "1px solid #1e293b",
         display: "flex",
         flexDirection: "column",
@@ -70,10 +71,10 @@ export default function SiteNav() {
       }}
     >
       <div style={{ padding: "0 20px 24px" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>
           Campus Pulse
         </div>
-        <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: colors.textDimmer, marginTop: 2 }}>
           UW Bothell
         </div>
       </div>
@@ -90,8 +91,8 @@ export default function SiteNav() {
                 padding: "10px 20px",
                 fontSize: 13,
                 fontWeight: active ? 600 : 400,
-                color: active ? "#7dd3fc" : "#94a3b8",
-                background: active ? "#1e293b" : "transparent",
+                color: active ? colors.blueLight : colors.textMuted,
+                background: active ? colors.bgPanel : "transparent",
                 borderLeft: active ? "2px solid #3b82f6" : "2px solid transparent",
                 textDecoration: "none",
                 transition: "all 0.15s",

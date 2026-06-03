@@ -8,6 +8,7 @@ import RecommendationsPanel from "@/components/RecommendationsPanel";
 import type { AlertPin } from "@/components/CampusMap";
 import { API_URL } from "@/lib/config";
 import { useWindowWidth } from "@/lib/useWindowWidth";
+import { colors, severity as sev } from "@/lib/tokens";
 
 // Leaflet uses browser APIs — must be loaded client-side only.
 const CampusMap = dynamic(() => import("@/components/CampusMap"), { ssr: false });
@@ -110,8 +111,8 @@ export default function HomePage() {
       {/* Header */}
       <header
         style={{
-          background: "#1e293b",
-          borderBottom: "1px solid #334155",
+          background: colors.bgPanel,
+          borderBottom: `1px solid ${colors.border}`,
           padding: "12px 20px",
           display: "flex",
           alignItems: "center",
@@ -122,10 +123,10 @@ export default function HomePage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 20 }}>📍</span>
           <div>
-            <h1 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+            <h1 style={{ fontSize: 16, fontWeight: 700, color: colors.textPrimary }}>
               UW Bothell Campus Pulse
             </h1>
-            <p style={{ fontSize: 11, color: "#94a3b8" }}>
+            <p style={{ fontSize: 11, color: colors.textMuted }}>
               Real-time alerts & campus activity
             </p>
           </div>
@@ -138,10 +139,10 @@ export default function HomePage() {
               href="/home"
               style={{
                 fontSize: 11,
-                color: "#475569",
+                color: colors.textDimmer,
                 textDecoration: "none",
                 padding: "4px 8px",
-                border: "1px solid #1e293b",
+                border: `1px solid ${colors.bgPanel}`,
                 borderRadius: 4,
               }}
             >
@@ -154,8 +155,8 @@ export default function HomePage() {
             <button
               onClick={() => setShowAlertList((v) => !v)}
               style={{
-                background: alerts.length > 0 ? "#7f1d1d" : "#1e3a5f",
-                color: alerts.length > 0 ? "#fca5a5" : "#7dd3fc",
+                background: alerts.length > 0 ? colors.highBg : colors.blueDark,
+                color: alerts.length > 0 ? colors.highText : colors.blueLight,
                 borderRadius: 20,
                 padding: "4px 12px",
                 fontSize: 12,
@@ -174,30 +175,30 @@ export default function HomePage() {
                   top: "calc(100% + 8px)",
                   right: 0,
                   width: 320,
-                  background: "#1e293b",
-                  border: "1px solid #334155",
+                  background: colors.bgPanel,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: 8,
                   boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                   zIndex: 2000,
                   overflow: "hidden",
                 }}
               >
-                <div style={{ padding: "10px 14px", borderBottom: "1px solid #334155", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <div style={{ padding: "10px 14px", borderBottom: `1px solid ${colors.border}`, fontSize: 11, fontWeight: 700, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Active Alerts
                 </div>
                 {alerts.map((alert) => {
-                  const sevColor = alert.severity === "high" ? "#ef4444" : alert.severity === "medium" ? "#f59e0b" : "#22c55e";
+                  const sevColor = (sev[alert.severity as keyof typeof sev] ?? sev.medium).pin;
                   return (
-                    <div key={alert.id} style={{ padding: "12px 14px", borderBottom: "1px solid #0f172a", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <div key={alert.id} style={{ padding: "12px 14px", borderBottom: `1px solid ${colors.bgBase}`, display: "flex", gap: 10, alignItems: "flex-start" }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: sevColor, flexShrink: 0, marginTop: 4 }} />
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", marginBottom: 2 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: colors.textPrimary, marginBottom: 2 }}>
                           {alert.incident_type} — {alert.building_name}
                         </div>
-                        <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 11, color: colors.textMuted, lineHeight: 1.5 }}>
                           {alert.raw_text.length > 100 ? alert.raw_text.slice(0, 100) + "…" : alert.raw_text}
                         </div>
-                        <div style={{ fontSize: 10, color: "#475569", marginTop: 4 }}>
+                        <div style={{ fontSize: 10, color: colors.textDimmer, marginTop: 4 }}>
                           {new Date(alert.published).toLocaleString()}
                         </div>
                       </div>
@@ -212,17 +213,17 @@ export default function HomePage() {
           {netid ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {!isMobile && (
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>
-                  Signed in as <strong style={{ color: "#f1f5f9" }}>{netid}</strong>
+                <span style={{ fontSize: 12, color: colors.textMuted }}>
+                  Signed in as <strong style={{ color: colors.textPrimary }}>{netid}</strong>
                 </span>
               )}
               <button
                 onClick={handleLogout}
                 style={{
                   fontSize: 11,
-                  color: "#94a3b8",
+                  color: colors.textMuted,
                   background: "transparent",
-                  border: "1px solid #334155",
+                  border: `1px solid ${colors.border}`,
                   borderRadius: 4,
                   padding: "3px 8px",
                   cursor: "pointer",
@@ -236,9 +237,9 @@ export default function HomePage() {
               href="/api/auth/login"
               style={{
                 fontSize: 12,
-                color: "#7dd3fc",
+                color: colors.blueLight,
                 background: "transparent",
-                border: "1px solid #1e3a5f",
+                border: `1px solid ${colors.blueDark}`,
                 borderRadius: 6,
                 padding: "5px 12px",
                 textDecoration: "none",
@@ -274,7 +275,7 @@ export default function HomePage() {
                 background: "rgba(15,23,42,0.7)",
                 zIndex: 1000,
                 fontSize: 14,
-                color: "#94a3b8",
+                color: colors.textMuted,
               }}
             >
               Loading campus map…
@@ -295,8 +296,8 @@ export default function HomePage() {
       {/* Legend */}
       <footer
         style={{
-          background: "#1e293b",
-          borderTop: "1px solid #334155",
+          background: colors.bgPanel,
+          borderTop: `1px solid ${colors.border}`,
           padding: "8px 16px",
           display: "flex",
           gap: 20,
@@ -304,25 +305,23 @@ export default function HomePage() {
           flexShrink: 0,
         }}
       >
-        {[
-          { color: "#ef4444", label: "High" },
-          { color: "#f59e0b", label: "Medium" },
-          { color: "#22c55e", label: "Low" },
-        ].map(({ color, label }) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {(["high", "medium", "low"] as const).map((level) => (
+          <div key={level} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span
               style={{
                 width: 12,
                 height: 12,
                 borderRadius: "50%",
-                background: color,
+                background: sev[level].pin,
                 display: "inline-block",
               }}
             />
-            <span style={{ fontSize: 11, color: "#94a3b8" }}>{label} severity</span>
+            <span style={{ fontSize: 11, color: colors.textMuted }}>
+              {level.charAt(0).toUpperCase() + level.slice(1)} severity
+            </span>
           </div>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "#475569" }}>
+        <span style={{ marginLeft: "auto", fontSize: 11, color: colors.textDimmer }}>
           Click a pin for details
         </span>
       </footer>
