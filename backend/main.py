@@ -167,6 +167,13 @@ async def startup_event() -> None:
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@app.get("/api/events")
+async def get_events() -> dict:
+    from events import get_all_events
+    events = get_all_events()
+    return {"events": events, "count": len(events), "source": "live" if any(e["id"].startswith("live-") for e in events) else "static"}
+
+
 @app.get("/api/alerts", response_model=AlertsResponse)
 async def get_alerts() -> AlertsResponse:
     if not _demo_pins:
