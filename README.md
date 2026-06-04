@@ -9,6 +9,9 @@ Built with Next.js, FastAPI, OpenStreetMap (Leaflet), and GPT-4o-mini.
 
 **Live Site:** https://css382-dyop.vercel.app
 
+> The map and emergency alerts are fully public — no login required.
+> The For You personalized events panel requires a UW email (@uw.edu or @washington.edu) via Google login.
+
 ## Stack
 
 | Layer | Tech |
